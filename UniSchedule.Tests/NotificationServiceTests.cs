@@ -77,8 +77,7 @@ public sealed class NotificationServiceTests : IDisposable
         {
             SelectedGroup = "11-321",
             SemesterStart = new DateTime(2026, 9, 1),
-            FirstReminderMinutes = 60,
-            SecondReminderMinutes = 0,
+            ReminderMinutes = [60],
             NotificationsEnabled = true
         };
         return new NotificationService(_database, settings, show, _logPath);

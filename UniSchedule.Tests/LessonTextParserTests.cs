@@ -40,6 +40,23 @@ public class LessonTextParserTests
         Assert.Equal(8, lesson.WeekTo);
     }
 
+    [Theory]
+    [InlineData("Матан, зачет Иванов И.И.", LessonCodes.Credit, "Матан")]
+    [InlineData("Матан, зачёт Иванов И.И.", LessonCodes.Credit, "Матан")]
+    [InlineData("Матан, экзамен Иванов И.И.", LessonCodes.Exam, "Матан")]
+    public void Parse_ReadsCreditAndExam(string text, string type, string subject)
+    {
+        var lesson = LessonTextParser.Parse(
+            text,
+            DayOfWeek.Monday,
+            new TimeSpan(8, 30, 0),
+            new TimeSpan(10, 0, 0),
+            "11-321");
+
+        Assert.Equal(type, lesson.LessonType);
+        Assert.Equal(subject, lesson.Subject);
+    }
+
     [Fact]
     public void ParseAll_SplitsElectives()
     {

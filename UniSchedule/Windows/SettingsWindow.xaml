@@ -31,16 +31,47 @@
             <TextBlock Text="Начало семестра" Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
             <DatePicker x:Name="SemesterPicker" Height="36" Margin="0,0,0,14"/>
 
-            <TextBlock Text="Первое напоминание, мин." Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
-            <TextBox x:Name="FirstReminderBox" AutomationProperties.AutomationId="FirstReminder" Height="36" Margin="0,0,0,14"/>
-
-            <TextBlock Text="Второе напоминание, мин." Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
-            <TextBox x:Name="SecondReminderBox" AutomationProperties.AutomationId="SecondReminder" Height="36" Margin="0,0,0,14"/>
+            <TextBlock Text="Напоминание, мин." Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="ReminderBox" AutomationProperties.AutomationId="ReminderMinutes" Height="36"
+                         PreviewKeyDown="ReminderBox_OnPreviewKeyDown"/>
+                <Button Grid.Column="1" Content="Добавить" AutomationProperties.AutomationId="AddReminder"
+                        MinWidth="120" Height="36" Padding="16,0" FontSize="15" VerticalAlignment="Center"
+                        Margin="8,0,0,0" Click="AddReminder_Click"/>
+            </Grid>
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid>
+                    <ComboBox x:Name="ReminderList" Height="36" AutomationProperties.AutomationId="ReminderList">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat=за {0} мин.}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Border IsHitTestVisible="False" Margin="12,0,32,0" Background="{StaticResource AppCard}">
+                        <TextBlock x:Name="ReminderSummary" VerticalAlignment="Center" FontSize="16"
+                                   Foreground="{StaticResource AppText}"/>
+                    </Border>
+                </Grid>
+                <Button x:Name="ReminderRemoveButton" Grid.Column="1" Content="Удалить"
+                        AutomationProperties.AutomationId="ReminderRemove"
+                        MinWidth="120" Height="36" Margin="8,0,0,0" Click="RemoveReminder_Click"/>
+            </Grid>
 
             <CheckBox x:Name="NotifyBox" Content="Включить уведомления" Margin="0,0,0,12"/>
             <CheckBox x:Name="TrayBox" AutomationProperties.AutomationId="MinimizeToTray" Content="Сворачивать в трей при закрытии" Margin="0,0,0,12"/>
             <CheckBox x:Name="AutostartBox" Content="Запускать вместе с Windows" Margin="0,0,0,16"/>
             <Button Content="Тест уведомления" Height="36" HorizontalAlignment="Left" Click="TestNotify_Click"/>
+            <Button AutomationProperties.AutomationId="ClearStoredData" Content="Очистить данные" Height="36"
+                    HorizontalAlignment="Left" Margin="0,12,0,0" Click="Clear_Click"/>
         </StackPanel>
     </DockPanel>
 </Window>

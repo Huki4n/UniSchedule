@@ -13,7 +13,11 @@ public class ItisExcelParserTests
         try
         {
             WriteWorkbook(path);
-            var result = ItisExcelParser.Parse(path);
+            var stages = new List<string>();
+            var result = ItisExcelParser.Parse(path, new Progress<string>(stages.Add));
+            Assert.Contains(stages, stage => stage.Contains("Расписание", StringComparison.Ordinal));
+            Assert.Contains(stages, stage => stage.Contains("11-321", StringComparison.Ordinal));
+            Assert.Contains(stages, stage => stage.Contains("11-205", StringComparison.Ordinal));
 
             Assert.Equal(["11-321", "11-205"], result.Groups);
             Assert.Equal(2, result.Lessons.Count);

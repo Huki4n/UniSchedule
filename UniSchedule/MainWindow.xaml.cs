@@ -3,6 +3,9 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using UniSchedule.Data;
 using UniSchedule.Models;
@@ -22,6 +25,12 @@ public partial class MainWindow : Window
     private bool _filteringGroups;
     private List<string> _groups = [];
     private readonly ObservableCollection<DayColumnVm> _days = [];
+    private readonly ObservableCollection<MonthWeekVm> _monthWeeks = [];
+    private DateTime _viewDate = DateTime.Today;
+    private DateTime _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private long? _homeworkLessonFilter;
+    private DispatcherTimer? _dayHighlightTimer;
+    private int _editorEpoch;
 
     public MainWindow(AppDatabase db, AppSettings settings, NotificationService notifications, bool manageAutostart)
     {
@@ -31,18 +40,19 @@ public partial class MainWindow : Window
         _notifications = notifications;
         _manageAutostart = manageAutostart;
         DaysHost.ItemsSource = _days;
+        MonthHost.ItemsSource = _monthWeeks;
         GroupBox.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
             new TextChangedEventHandler(GroupBox_OnTextChanged));
         GroupBox.DropDownOpened += (_, _) => ResetGroupListIfIdle();
         ReloadGroups();
-        ReloadSchedule();
+        ReloadBoard();
     }
 
     public void ReloadAll()
     {
         _settings = _db.GetSettings();
         ReloadGroups();
-        ReloadSchedule();
+        ReloadBoard();
     }
 
     private void ReloadGroups()
@@ -113,7 +123,13 @@ public partial class MainWindow : Window
         _suppressGroupChange = false;
     }
 
-    private void LessonSearchBox_OnTextChanged(object sender, TextChangedEventArgs e) => ReloadSchedule();
+    private void LessonSearchBox_OnTextChanged(object sender, TextChangedEventArgs e) => ReloadBoard();
+
+    private void ReloadBoard()
+    {
+        ReloadSchedule();
+        ReloadHomework();
+    }
 
     private void ReloadSchedule()
     {
@@ -121,7 +137,9 @@ public partial class MainWindow : Window
             _db.GetLessons(_settings.SelectedGroup),
             LessonSearchBox.Text,
             DateTime.Now,
-            _settings.SemesterStart);
+            _settings.SemesterStart,
+            _viewDate,
+            _db.GetHomework(_settings.SelectedGroup));
         WeekLabel.Text = snapshot.WeekLabel;
         NextLessonLabel.Text = snapshot.NextLessonText;
         _days.Clear();
@@ -129,6 +147,78 @@ public partial class MainWindow : Window
         {
             _days.Add(day);
         }
+    }
+
+    private void ReloadHomework()
+    {
+        var lessons = _db.GetLessons(_settings.SelectedGroup);
+        if (_homeworkLessonFilter is long filter && lessons.All(lesson => lesson.Id != filter))
+        {
+            _homeworkLessonFilter = null;
+        }
+
+        var snapshot = HomeworkCalendar.Build(
+            _db.GetHomework(_settings.SelectedGroup),
+            lessons,
+            _month,
+            DateTime.Now,
+            LessonSearchBox.Text,
+            _homeworkLessonFilter);
+        MonthLabel.Text = snapshot.MonthLabel;
+        var visible = snapshot.Weeks.Sum(week => week.Days.Sum(day => day.Items.Count));
+        HomeworkEmptyLabel.Visibility = visible == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (_homeworkLessonFilter is long lessonId)
+        {
+            var subject = lessons.First(lesson => lesson.Id == lessonId).Subject;
+            HomeworkFilterLabel.Text = $"Только пара «{subject}»";
+            HomeworkFilterBar.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            HomeworkFilterBar.Visibility = Visibility.Collapsed;
+        }
+
+        _monthWeeks.Clear();
+        foreach (var week in snapshot.Weeks)
+        {
+            _monthWeeks.Add(week);
+        }
+    }
+
+    private void PrevWeek_Click(object sender, RoutedEventArgs e)
+    {
+        _viewDate = AcademicCalendar.StartOfWeek(_viewDate).AddDays(-7);
+        ReloadSchedule();
+    }
+
+    private void NextWeek_Click(object sender, RoutedEventArgs e)
+    {
+        _viewDate = AcademicCalendar.StartOfWeek(_viewDate).AddDays(7);
+        ReloadSchedule();
+    }
+
+    private void TodayWeek_Click(object sender, RoutedEventArgs e)
+    {
+        _viewDate = DateTime.Today;
+        ReloadSchedule();
+    }
+
+    private void PrevMonth_Click(object sender, RoutedEventArgs e)
+    {
+        _month = _month.AddMonths(-1);
+        ReloadHomework();
+    }
+
+    private void NextMonth_Click(object sender, RoutedEventArgs e)
+    {
+        _month = _month.AddMonths(1);
+        ReloadHomework();
+    }
+
+    private void ClearHomeworkFilter_Click(object sender, RoutedEventArgs e)
+    {
+        _homeworkLessonFilter = null;
+        ReloadHomework();
     }
 
     private void GroupBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -141,17 +231,23 @@ public partial class MainWindow : Window
         _settings.SelectedGroup = group;
         _db.SaveSettings(_settings);
         _notifications.UpdateSettings(_settings);
-        ReloadSchedule();
+        _homeworkLessonFilter = null;
+        ReloadBoard();
     }
 
     internal static string? ImportFileOverride { get; set; }
 
-    private void Import_Click(object sender, RoutedEventArgs e)
+    private async void Import_Click(object sender, RoutedEventArgs e)
     {
+        if (ImportPanel.Visibility == Visibility.Visible)
+        {
+            return;
+        }
+
         var path = ImportFileOverride;
         if (path is null)
         {
-            var dialog = new Microsoft.Win32.OpenFileDialog
+            var dialog = new OpenFileDialog
             {
                 Filter = "Excel (*.xlsx)|*.xlsx",
                 Title = "Импорт расписания ИТИС",
@@ -166,16 +262,24 @@ public partial class MainWindow : Window
             path = dialog.FileName;
         }
 
+        var selectedGroup = _settings.SelectedGroup;
+        ImportStatus.Text = "Читаю лист";
+        ImportPanel.Visibility = Visibility.Visible;
         try
         {
-            var result = ItisExcelParser.Parse(path);
-            var count = _db.ReplaceImported(result.Lessons);
-            AppDialog.Info(this, "Импорт", result.FormatStoredMessage(count, _settings.SelectedGroup));
+            var progress = new Progress<string>(text => ImportStatus.Text = text);
+            var result = await Task.Run(() => ItisExcelParser.Parse(path, progress));
+            ImportStatus.Text = "Записываю в базу";
+            await Dispatcher.InvokeAsync(static () => { }, DispatcherPriority.Render);
+            var count = await Task.Run(() => _db.ReplaceImported(result.Lessons));
+            ImportPanel.Visibility = Visibility.Collapsed;
+            AppDialog.Info(this, "Импорт", result.FormatStoredMessage(count, selectedGroup));
             ReloadGroups();
-            ReloadSchedule();
+            ReloadBoard();
         }
         catch (Exception ex)
         {
+            ImportPanel.Visibility = Visibility.Collapsed;
             AppDialog.Info(this, "Импорт не удался", ex.Message);
         }
     }
@@ -205,10 +309,18 @@ public partial class MainWindow : Window
         var window = new SettingsWindow(_settings.Clone(), groups)
         {
             Owner = this,
-            TestNotification = ShowTestNotification
+            TestNotification = ShowTestNotification,
+            ClearStoredData = _db.ClearStoredData
         };
         if (window.ShowDialog() != true)
         {
+            if (window.DataCleared)
+            {
+                CloseEditor();
+                ReloadGroups();
+                ReloadBoard();
+            }
+
             return;
         }
 
@@ -220,7 +332,7 @@ public partial class MainWindow : Window
         }
         _notifications.UpdateSettings(_settings);
         ReloadGroups();
-        ReloadSchedule();
+        ReloadBoard();
     }
 
     private void LessonCard_OnClick(object sender, MouseButtonEventArgs e)
@@ -228,6 +340,15 @@ public partial class MainWindow : Window
         if (sender is FrameworkElement { DataContext: LessonCardVm card })
         {
             EditLesson(card.Lesson, card.Lesson.DayOfWeek);
+        }
+    }
+
+    private void LessonHomework_OnClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is FrameworkElement { DataContext: HomeworkLinkVm link })
+        {
+            EditHomework(link.Homework, link.Homework.LessonId);
         }
     }
 
@@ -255,13 +376,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!AppDialog.Confirm(this, "Удалить пару?", $"«{lesson.Subject}» будет удалена."))
+        if (!AppDialog.Confirm(this, "Удалить пару?", LessonForm.DeleteConfirmText(lesson.Subject, _db.CountHomework(lesson.Id))))
         {
             return;
         }
 
         _db.DeleteLesson(lesson.Id);
-        ReloadSchedule();
+        ReloadBoard();
     }
 
     private void OpenLinkMenu_Click(object sender, RoutedEventArgs e)
@@ -272,8 +393,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        Process.Start(new ProcessStartInfo(lesson.PrimaryUrl) { UseShellExecute = true });
+        OpenAddress(lesson.PrimaryUrl);
     }
+
+    private void CardLink_OnClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is FrameworkElement { DataContext: string url })
+        {
+            OpenAddress(url);
+        }
+    }
+
+    private static void OpenAddress(string url) =>
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 
     private void EditLesson(Lesson? existing, DayOfWeek day)
     {
@@ -285,13 +418,31 @@ public partial class MainWindow : Window
             Source = LessonCodes.Manual
         };
 
-        var window = new LessonEditWindow(lesson, isNew) { Owner = this };
-        if (window.ShowDialog() != true)
+        var groupLessons = _db.GetLessons(_settings.SelectedGroup);
+        var homework = existing is null
+            ? []
+            : _db.GetHomework(_settings.SelectedGroup).Where(item => item.LessonId == existing.Id).ToList();
+        var hasRelated = existing is not null && LessonSeries.HasOthers(groupLessons, existing);
+        var rollback = existing is null ? null : _db.GetSubjectRollback(existing.Id, DateTime.Today);
+        var editor = new LessonEditWindow(lesson, isNew, homework, hasRelated, rollback);
+        editor.Finished += (_, _) => HideEditor(() => ApplyLesson(editor, existing, lesson, isNew, groupLessons));
+        ShowEditor(editor, isNew ? "Новая пара" : "Редактирование пары");
+    }
+
+    private void ApplyLesson(LessonEditWindow editor, Lesson? existing, Lesson lesson, bool isNew, List<Lesson> groupLessons)
+    {
+        if (editor.OpenHomework is not null)
+        {
+            EditHomework(editor.OpenHomework, editor.OpenHomework.LessonId);
+            return;
+        }
+
+        if (!editor.Accepted)
         {
             return;
         }
 
-        if (window.Deleted && existing is not null)
+        if (editor.Deleted && existing is not null)
         {
             _db.DeleteLesson(existing.Id);
         }
@@ -304,9 +455,293 @@ public partial class MainWindow : Window
             }
 
             _db.UpsertLesson(lesson);
+            var affected = existing is null
+                ? []
+                : LessonSeries.Select(groupLessons, existing, editor.Scope);
+            var previousSubjects = affected.ToDictionary(item => item.Id, item => item.Subject);
+            foreach (var other in affected)
+            {
+                LessonSeries.CopyShared(lesson, other);
+                _db.UpsertLesson(other);
+            }
+
+            RememberSubjectNames(existing, lesson, previousSubjects);
         }
 
+        ReloadBoard();
+    }
+
+    private void HomeworkOfLesson_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetLesson(sender) is not { } lesson)
+        {
+            return;
+        }
+
+        var items = _db.GetHomework(_settings.SelectedGroup)
+            .Where(item => item.LessonId == lesson.Id)
+            .ToList();
+        _homeworkLessonFilter = lesson.Id;
+        if (items.Count > 0)
+        {
+            var nearest = HomeworkCalendar.NearestDeadline(items, DateTime.Today);
+            _month = new DateTime(nearest.Year, nearest.Month, 1);
+        }
+
+        MainTabs.SelectedItem = HomeworkTab;
+        ReloadHomework();
+    }
+
+    private void AddHomeworkForLesson_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetLesson(sender) is { } lesson)
+        {
+            EditHomework(null, lesson.Id);
+        }
+    }
+
+    private void AddHomework_Click(object sender, RoutedEventArgs e) => EditHomework(null, _homeworkLessonFilter);
+
+    private void HomeworkDay_OnClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: MonthDayVm day } || !day.IsCurrentMonth || day.Items.Count > 0)
+        {
+            return;
+        }
+
+        EditHomework(null, _homeworkLessonFilter, day.Date);
+    }
+
+    private void HomeworkCard_OnClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is FrameworkElement { DataContext: HomeworkCardVm card })
+        {
+            EditHomework(card.Homework, card.Homework.LessonId);
+        }
+    }
+
+    private void EditHomeworkMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetHomeworkCard(sender) is { } card)
+        {
+            EditHomework(card.Homework, card.Homework.LessonId);
+        }
+    }
+
+    private void DeleteHomeworkMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetHomeworkCard(sender) is not { } card)
+        {
+            return;
+        }
+
+        var name = string.IsNullOrWhiteSpace(card.Title) ? "Домашка будет удалена." : $"«{card.Title}» будет удалена.";
+        if (!AppDialog.Confirm(this, "Удалить домашку?", name))
+        {
+            return;
+        }
+
+        _db.DeleteHomework(card.Homework.Id);
+        ReloadBoard();
+    }
+
+    private void HomeworkWeekMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetHomeworkCard(sender) is { } card)
+        {
+            ShowScheduleDay(card.Homework.Deadline);
+        }
+    }
+
+    private void ShowScheduleDay(DateTime date)
+    {
+        _viewDate = date.Date;
+        MainTabs.SelectedItem = ScheduleTab;
         ReloadSchedule();
+        PulseDay(date.Date);
+    }
+
+    private void PulseDay(DateTime date)
+    {
+        _dayHighlightTimer?.Stop();
+        foreach (var day in _days)
+        {
+            day.IsHighlighted = false;
+        }
+
+        if (date.DayOfWeek == DayOfWeek.Sunday)
+        {
+            return;
+        }
+
+        var column = _days.FirstOrDefault(day => day.Date == date);
+        if (column is null)
+        {
+            return;
+        }
+
+        column.IsHighlighted = true;
+        _dayHighlightTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _dayHighlightTimer.Tick += (_, _) =>
+        {
+            _dayHighlightTimer.Stop();
+            column.IsHighlighted = false;
+        };
+        _dayHighlightTimer.Start();
+    }
+
+    private void EditHomework(Homework? existing, long? lessonId, DateTime? deadline = null)
+    {
+        var lessons = _db.GetLessons(_settings.SelectedGroup);
+        if (lessons.Count == 0)
+        {
+            AppDialog.Info(this, "Нет пар", HomeworkForm.NoLessonsMessage);
+            return;
+        }
+
+        var isNew = existing is null;
+        var homework = existing?.Clone() ?? new Homework
+        {
+            LessonId = lessonId ?? 0,
+            Deadline = deadline?.Date ?? DateTime.Today
+        };
+
+        var comments = homework.Id > 0 ? _db.GetHomeworkComments(homework.Id) : [];
+        var editor = new HomeworkEditWindow(homework, isNew, lessons, comments);
+        editor.CommentAdded += (_, text) =>
+        {
+            _db.AddHomeworkComment(homework.Id, text, DateTime.Now);
+            editor.SetComments(_db.GetHomeworkComments(homework.Id));
+        };
+        editor.CommentRemoved += (_, id) =>
+        {
+            _db.DeleteHomeworkComment(id);
+            editor.SetComments(_db.GetHomeworkComments(homework.Id));
+        };
+        editor.Finished += (_, _) => HideEditor(() => ApplyHomework(editor, existing, homework));
+        ShowEditor(editor, isNew ? "Новая домашка" : "Редактирование домашки");
+    }
+
+    private void ApplyHomework(HomeworkEditWindow editor, Homework? existing, Homework homework)
+    {
+        if (editor.OpenSchedule)
+        {
+            ShowScheduleDay(editor.ScheduleDate);
+            return;
+        }
+
+        if (!editor.Accepted)
+        {
+            return;
+        }
+
+        if (editor.Deleted && existing is not null)
+        {
+            _db.DeleteHomework(existing.Id);
+        }
+        else
+        {
+            _db.UpsertHomework(homework);
+        }
+
+        ReloadBoard();
+    }
+
+    private void ShowEditor(UIElement editor, string title)
+    {
+        _editorEpoch++;
+        EditorTitle.Text = title;
+        var opening = EditorPanel.Visibility != Visibility.Visible;
+        EditorHost.Content = editor;
+        EditorPanel.Visibility = Visibility.Visible;
+        if (opening)
+        {
+            EditorShift.BeginAnimation(
+                TranslateTransform.XProperty,
+                new DoubleAnimation(560, 0, TimeSpan.FromMilliseconds(180)));
+        }
+        else
+        {
+            EditorShift.BeginAnimation(TranslateTransform.XProperty, null);
+            EditorShift.X = 0;
+        }
+    }
+
+    private void HideEditor(Action? then)
+    {
+        var epoch = _editorEpoch;
+        var animation = new DoubleAnimation(0, 560, TimeSpan.FromMilliseconds(160));
+        animation.Completed += (_, _) =>
+        {
+            if (epoch != _editorEpoch)
+            {
+                return;
+            }
+
+            EditorPanel.Visibility = Visibility.Collapsed;
+            EditorHost.Content = null;
+            then?.Invoke();
+        };
+        EditorShift.BeginAnimation(TranslateTransform.XProperty, animation);
+    }
+
+    private void CloseEditor()
+    {
+        if (EditorPanel.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        _editorEpoch++;
+        EditorShift.BeginAnimation(TranslateTransform.XProperty, null);
+        EditorShift.X = 560;
+        EditorPanel.Visibility = Visibility.Collapsed;
+        EditorHost.Content = null;
+    }
+
+    private void CloseEditor_Click(object sender, RoutedEventArgs e)
+    {
+        switch (EditorHost.Content)
+        {
+            case LessonEditWindow lesson:
+                lesson.RequestCancel();
+                break;
+            case HomeworkEditWindow homework:
+                homework.RequestCancel();
+                break;
+        }
+    }
+
+    private void RememberSubjectNames(Lesson? original, Lesson saved, IReadOnlyDictionary<long, string> previousSubjects)
+    {
+        if (original is null)
+        {
+            return;
+        }
+
+        var today = DateTime.Today;
+        RememberSubjectName(original.Id, original.Subject, saved.Subject, today);
+        foreach (var (lessonId, previous) in previousSubjects)
+        {
+            RememberSubjectName(lessonId, previous, saved.Subject, today);
+        }
+    }
+
+    private void RememberSubjectName(long lessonId, string previous, string next, DateTime today)
+    {
+        var stored = _db.GetSubjectRollback(lessonId, today);
+        if (string.Equals(next.Trim(), (stored ?? previous).Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            if (stored is not null)
+            {
+                _db.ForgetSubjectRollback(lessonId);
+            }
+
+            return;
+        }
+
+        _db.RememberSubjectRollback(lessonId, stored ?? previous, today);
     }
 
     private static Lesson? GetLesson(object sender)
@@ -315,6 +750,17 @@ public partial class MainWindow : Window
             element.DataContext is LessonCardVm card)
         {
             return card.Lesson;
+        }
+
+        return null;
+    }
+
+    private static HomeworkCardVm? GetHomeworkCard(object sender)
+    {
+        if (sender is System.Windows.Controls.MenuItem { Parent: System.Windows.Controls.ContextMenu { PlacementTarget: FrameworkElement element } } &&
+            element.DataContext is HomeworkCardVm card)
+        {
+            return card;
         }
 
         return null;

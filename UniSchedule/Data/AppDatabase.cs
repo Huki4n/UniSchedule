@@ -1,10 +1,8 @@
-using System.Globalization;
 using Microsoft.Data.Sqlite;
-using UniSchedule.Models;
 
 namespace UniSchedule.Data;
 
-public sealed class AppDatabase
+public sealed partial class AppDatabase
 {
     private readonly string _connectionString;
 
@@ -131,304 +129,65 @@ public sealed class AppDatabase
                 PRIMARY KEY (LessonId, FireDate, OffsetMinutes)
             );
             CREATE INDEX IF NOT EXISTS IX_Lessons_Group ON Lessons(GroupCode);
+            CREATE TABLE IF NOT EXISTS Homework (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                LessonId INTEGER NOT NULL,
+                Title TEXT NOT NULL,
+                Description TEXT NOT NULL DEFAULT '',
+                Deadline TEXT NOT NULL,
+                IsDone INTEGER NOT NULL DEFAULT 0,
+                Url TEXT NOT NULL DEFAULT '',
+                ExtraUrl TEXT NOT NULL DEFAULT ''
+            );
+            CREATE INDEX IF NOT EXISTS IX_Homework_Lesson ON Homework(LessonId);
+            CREATE INDEX IF NOT EXISTS IX_Homework_Deadline ON Homework(Deadline);
+            CREATE TABLE IF NOT EXISTS SubjectRollback (
+                LessonId INTEGER PRIMARY KEY,
+                OriginalSubject TEXT NOT NULL,
+                ChangedOn TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS HomeworkComment (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                HomeworkId INTEGER NOT NULL,
+                Body TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_HomeworkComment_Homework ON HomeworkComment(HomeworkId);
             """;
         cmd.ExecuteNonQuery();
+        EnsureColumn(db, "Homework", "Url", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(db, "Homework", "ExtraUrl", "TEXT NOT NULL DEFAULT ''");
     }
 
-    public AppSettings GetSettings()
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT Key, Value FROM Settings";
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            map[reader.GetString(0)] = reader.GetString(1);
-        }
-
-        var settings = new AppSettings();
-        if (map.TryGetValue("SelectedGroup", out var group) && !string.IsNullOrWhiteSpace(group))
-        {
-            settings.SelectedGroup = group.Trim();
-        }
-
-        if (map.TryGetValue("SemesterStart", out var start) && TryReadDate(start, out var date))
-        {
-            settings.SemesterStart = date.Date;
-        }
-
-        if (map.TryGetValue("FirstReminderMinutes", out var first) && int.TryParse(first, out var firstMin))
-        {
-            settings.FirstReminderMinutes = firstMin;
-        }
-
-        if (map.TryGetValue("SecondReminderMinutes", out var second) && int.TryParse(second, out var secondMin))
-        {
-            settings.SecondReminderMinutes = secondMin;
-        }
-
-        settings.NotificationsEnabled = GetBool(map, "NotificationsEnabled", true);
-        settings.Autostart = GetBool(map, "Autostart", false);
-        settings.MinimizeToTray = GetBool(map, "MinimizeToTray", true);
-        return settings;
-    }
-
-    public void SaveSettings(AppSettings settings)
+    public void ClearStoredData()
     {
         using var db = Open();
         using var tx = db.BeginTransaction();
-        Set(db, "SelectedGroup", settings.SelectedGroup);
-        Set(db, "SemesterStart", settings.SemesterStart.ToString("yyyy-MM-dd"));
-        Set(db, "FirstReminderMinutes", settings.FirstReminderMinutes.ToString());
-        Set(db, "SecondReminderMinutes", settings.SecondReminderMinutes.ToString());
-        Set(db, "NotificationsEnabled", settings.NotificationsEnabled ? "1" : "0");
-        Set(db, "Autostart", settings.Autostart ? "1" : "0");
-        Set(db, "MinimizeToTray", settings.MinimizeToTray ? "1" : "0");
-        tx.Commit();
-    }
-
-    public List<string> GetGroups()
-    {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT DISTINCT GroupCode FROM Lessons ORDER BY GroupCode";
-        var groups = new List<string>();
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            groups.Add(reader.GetString(0));
-        }
-
-        return groups;
-    }
-
-    public List<Lesson> GetLessons(string groupCode)
-    {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
-            SELECT Id, GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                   MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source
-            FROM Lessons
-            WHERE GroupCode = $group
-            ORDER BY DayOfWeek, Start
-            """;
-        cmd.Parameters.AddWithValue("$group", groupCode);
-        return ReadLessons(cmd);
-    }
-
-    public List<Lesson> GetAllLessons()
-    {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
-            SELECT Id, GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                   MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source
-            FROM Lessons
-            ORDER BY GroupCode, DayOfWeek, Start
-            """;
-        return ReadLessons(cmd);
-    }
-
-    public long UpsertLesson(Lesson lesson)
-    {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        if (lesson.Id > 0)
-        {
-            cmd.CommandText =
-                """
-                UPDATE Lessons SET
-                    GroupCode=$group, DayOfWeek=$day, Start=$start, End=$end, Subject=$subject,
-                    LessonType=$type, Teacher=$teacher, Room=$room, MeetingUrl=$meet, LmsUrl=$lms,
-                    Parity=$parity, WeekFrom=$from, WeekTo=$to, Notes=$notes, RawText=$raw, Source=$source
-                WHERE Id=$id
-                """;
-            cmd.Parameters.AddWithValue("$id", lesson.Id);
-        }
-        else
-        {
-            cmd.CommandText =
-                """
-                INSERT INTO Lessons (
-                    GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                    MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source)
-                VALUES (
-                    $group, $day, $start, $end, $subject, $type, $teacher, $room,
-                    $meet, $lms, $parity, $from, $to, $notes, $raw, $source);
-                SELECT last_insert_rowid();
-                """;
-        }
-
-        BindLesson(cmd, lesson);
-        var result = cmd.ExecuteScalar();
-        if (lesson.Id <= 0 && result is not null)
-        {
-            lesson.Id = Convert.ToInt64(result);
-        }
-
-        return lesson.Id;
-    }
-
-    public void DeleteLesson(long id)
-    {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText = "DELETE FROM Lessons WHERE Id=$id";
-        cmd.Parameters.AddWithValue("$id", id);
-        cmd.ExecuteNonQuery();
-    }
-
-    public int ReplaceImported(IReadOnlyList<Lesson> lessons)
-    {
-        using var db = Open();
-        using var tx = db.BeginTransaction();
-        using (var clear = db.CreateCommand())
-        {
-            clear.CommandText = "DELETE FROM Lessons WHERE Source='imported'";
-            clear.ExecuteNonQuery();
-        }
-
-        foreach (var lesson in lessons)
+        foreach (var table in new[] { "HomeworkComment", "Homework", "SubjectRollback", "NotificationLog", "Lessons" })
         {
             using var cmd = db.CreateCommand();
-            cmd.CommandText =
-                """
-                INSERT INTO Lessons (
-                    GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                    MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source)
-                VALUES (
-                    $group, $day, $start, $end, $subject, $type, $teacher, $room,
-                    $meet, $lms, $parity, $from, $to, $notes, $raw, $source)
-                """;
-            lesson.Source = LessonCodes.Imported;
-            BindLesson(cmd, lesson);
+            cmd.CommandText = $"DELETE FROM {table}";
             cmd.ExecuteNonQuery();
         }
 
         tx.Commit();
-        return lessons.Count;
     }
 
-    public bool WasNotificationSent(long lessonId, DateTime date, int offsetMinutes)
+    private static void EnsureColumn(SqliteConnection db, string table, string column, string definition)
     {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
-            SELECT 1 FROM NotificationLog
-            WHERE LessonId=$id AND FireDate=$date AND OffsetMinutes=$off
-            """;
-        cmd.Parameters.AddWithValue("$id", lessonId);
-        cmd.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
-        cmd.Parameters.AddWithValue("$off", offsetMinutes);
-        return cmd.ExecuteScalar() is not null;
-    }
-
-    public void MarkNotificationSent(long lessonId, DateTime date, int offsetMinutes)
-    {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
-            INSERT OR IGNORE INTO NotificationLog (LessonId, FireDate, OffsetMinutes)
-            VALUES ($id, $date, $off)
-            """;
-        cmd.Parameters.AddWithValue("$id", lessonId);
-        cmd.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
-        cmd.Parameters.AddWithValue("$off", offsetMinutes);
-        cmd.ExecuteNonQuery();
-    }
-
-    private static List<Lesson> ReadLessons(SqliteCommand cmd)
-    {
-        var list = new List<Lesson>();
-        using var reader = cmd.ExecuteReader();
+        using var info = db.CreateCommand();
+        info.CommandText = $"PRAGMA table_info({table})";
+        using var reader = info.ExecuteReader();
         while (reader.Read())
         {
-            list.Add(new Lesson
+            if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
             {
-                Id = reader.GetInt64(0),
-                GroupCode = reader.GetString(1),
-                DayOfWeek = (DayOfWeek)reader.GetInt32(2),
-                Start = TimeSpan.Parse(reader.GetString(3)),
-                End = TimeSpan.Parse(reader.GetString(4)),
-                Subject = reader.GetString(5),
-                LessonType = reader.GetString(6),
-                Teacher = reader.GetString(7),
-                Room = reader.GetString(8),
-                MeetingUrl = reader.GetString(9),
-                LmsUrl = reader.GetString(10),
-                Parity = (WeekParity)reader.GetInt32(11),
-                WeekFrom = reader.IsDBNull(12) ? null : reader.GetInt32(12),
-                WeekTo = reader.IsDBNull(13) ? null : reader.GetInt32(13),
-                Notes = reader.GetString(14),
-                RawText = reader.GetString(15),
-                Source = reader.GetString(16)
-            });
+                return;
+            }
         }
 
-        return list;
-    }
-
-    private static void BindLesson(SqliteCommand cmd, Lesson lesson)
-    {
-        cmd.Parameters.AddWithValue("$group", lesson.GroupCode);
-        cmd.Parameters.AddWithValue("$day", (int)lesson.DayOfWeek);
-        cmd.Parameters.AddWithValue("$start", lesson.Start.ToString(@"hh\:mm"));
-        cmd.Parameters.AddWithValue("$end", lesson.End.ToString(@"hh\:mm"));
-        cmd.Parameters.AddWithValue("$subject", lesson.Subject);
-        cmd.Parameters.AddWithValue("$type", lesson.LessonType);
-        cmd.Parameters.AddWithValue("$teacher", lesson.Teacher);
-        cmd.Parameters.AddWithValue("$room", lesson.Room);
-        cmd.Parameters.AddWithValue("$meet", lesson.MeetingUrl);
-        cmd.Parameters.AddWithValue("$lms", lesson.LmsUrl);
-        cmd.Parameters.AddWithValue("$parity", (int)lesson.Parity);
-        cmd.Parameters.AddWithValue("$from", lesson.WeekFrom is int from ? from : DBNull.Value);
-        cmd.Parameters.AddWithValue("$to", lesson.WeekTo is int to ? to : DBNull.Value);
-        cmd.Parameters.AddWithValue("$notes", lesson.Notes);
-        cmd.Parameters.AddWithValue("$raw", lesson.RawText);
-        cmd.Parameters.AddWithValue("$source", lesson.Source);
-    }
-
-    private static void Set(SqliteConnection db, string key, string value)
-    {
-        using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
-            INSERT INTO Settings(Key, Value) VALUES ($k, $v)
-            ON CONFLICT(Key) DO UPDATE SET Value=excluded.Value
-            """;
-        cmd.Parameters.AddWithValue("$k", key);
-        cmd.Parameters.AddWithValue("$v", value);
-        cmd.ExecuteNonQuery();
-    }
-
-    private static bool TryReadDate(string text, out DateTime date)
-    {
-        if (DateTime.TryParseExact(
-                text,
-                "yyyy-MM-dd",
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out date))
-        {
-            return true;
-        }
-
-        return DateTime.TryParse(text, out date);
-    }
-
-    private static bool GetBool(Dictionary<string, string> map, string key, bool fallback)
-    {
-        if (!map.TryGetValue(key, out var value))
-        {
-            return fallback;
-        }
-
-        return value is "1" or "true" or "True";
+        using var alter = db.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition}";
+        alter.ExecuteNonQuery();
     }
 }

@@ -5,6 +5,20 @@ public static class LessonForm
     public const string SubjectError = "Укажите название предмета.";
     public const string TimeError = "Время укажите в формате ЧЧ:ММ, конец позже начала.";
 
+    public static string DeleteConfirmText(string? subject, int homeworkCount)
+    {
+        var named = !string.IsNullOrWhiteSpace(subject);
+        var lesson = named ? $"«{subject!.Trim()}» будет удалена." : "Пара будет удалена.";
+        if (homeworkCount <= 0)
+        {
+            return lesson;
+        }
+
+        return named
+            ? $"«{subject!.Trim()}» будет удалена вместе с домашками ({homeworkCount})."
+            : $"Пара будет удалена вместе с домашками ({homeworkCount}).";
+    }
+
     public static bool TryValidate(
         string? subject,
         string? startText,

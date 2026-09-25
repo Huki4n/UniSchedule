@@ -28,19 +28,23 @@ public sealed class ImportResult
 
 public static class ItisExcelParser
 {
-    public static ImportResult Parse(string path)
+    public static ImportResult Parse(string path, IProgress<string>? progress = null)
     {
         using var workbook = new XLWorkbook(path);
         var schedule = FindSheet(workbook, "Расписание") ?? workbook.Worksheets.First();
         var linksSheet = FindSheet(workbook, "Ссылки");
+        progress?.Report($"Читаю лист «{schedule.Name}»");
 
         var mergeMap = BuildMergeMap(schedule);
         var groups = ReadGroups(schedule, mergeMap);
         var links = linksSheet is null ? [] : ReadLinks(linksSheet);
         var result = new ImportResult();
         result.Groups.AddRange(groups.Select(g => g.Code));
+        var index = 0;
         foreach (var group in groups)
         {
+            index++;
+            progress?.Report($"Группа {index} из {groups.Count}: {group.Code}");
             DayOfWeek? day = null;
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var lastRow = Math.Max(schedule.LastRowUsed()?.RowNumber() ?? 45, 45);
