@@ -1,0 +1,12 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        <SolidColorBrush x:Key="AppBg" Color="#121418"/>
+        <SolidColorBrush x:Key="AppSurface" Color="#1A1D24"/>
+        <SolidColorBrush x:Key="AppCard" Color="#22262F"/>
+        <SolidColorBrush x:Key="AppBorder" Color="#333845"/>
+        <SolidColorBrush x:Key="AppText" Color="#F3F4F6"/>
+        <SolidColorBrush x:Key="AppMuted" Color="#9CA3AF"/>
+        <SolidColorBrush x:Key="AppAccent" Color="#60A5FA"/>
+        <SolidColorBrush x:Key="AppToday" Color="#152238"/>
+        <SolidColorBrush x:Key="AppTodayBorder" Color="#3B82F6"/>
+</ResourceDictionary>
