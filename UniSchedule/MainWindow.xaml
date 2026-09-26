@@ -7,7 +7,8 @@
         Height="900" Width="1440"
         MinHeight="700" MinWidth="1100"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource AppBg}">
+        Background="{StaticResource AppBg}"
+        PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown">
     <Grid>
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="{StaticResource AppSurface}"
@@ -142,9 +143,21 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type vm:LessonCardVm}">
                                                         <Border Margin="0,0,4,6" Padding="10,9" CornerRadius="8" Cursor="Hand"
-                                                                Background="{StaticResource AppCard}"
                                                                 MouseLeftButtonUp="LessonCard_OnClick"
                                                                 Opacity="{Binding IsDimmed, Converter={StaticResource DimConverter}}">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="{StaticResource AppCard}"/>
+                                                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                                                                            <Setter Property="BorderBrush" Value="{StaticResource AppAccent}"/>
+                                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
                                                             <DockPanel>
                                                                 <Border DockPanel.Dock="Left" Width="3" CornerRadius="2" Margin="0,0,8,0"
                                                                         Background="{Binding Accent, Converter={StaticResource HexBrushConverter}}"/>

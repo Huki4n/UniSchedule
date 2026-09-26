@@ -30,6 +30,9 @@ public partial class MainWindow : Window
     private DateTime _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private long? _homeworkLessonFilter;
     private DispatcherTimer? _dayHighlightTimer;
+    private HomeworkCommentDraft? _commentDraft;
+    private bool _savePrompt;
+    private bool _editorClosing;
     private int _editorEpoch;
 
     public MainWindow(AppDatabase db, AppSettings settings, NotificationService notifications, bool manageAutostart)
@@ -446,6 +449,7 @@ public partial class MainWindow : Window
             : _db.GetHomework(_settings.SelectedGroup).Where(item => item.LessonId == existing.Id).ToList();
         var hasRelated = existing is not null && LessonSeries.HasOthers(groupLessons, existing);
         var rollback = existing is null ? null : _db.GetSubjectRollback(existing.Id, DateTime.Today);
+        _commentDraft = null;
         var editor = new LessonEditWindow(lesson, isNew, homework, hasRelated, rollback);
         editor.Finished += (_, _) =>
         {
@@ -581,43 +585,58 @@ public partial class MainWindow : Window
     {
         if (GetHomeworkCard(sender) is { } card)
         {
-            ShowScheduleDay(card.Homework.Deadline);
+            ShowScheduleLesson(card.Homework.Deadline, card.Homework.LessonId);
         }
     }
 
-    private void ShowScheduleDay(DateTime date)
+    private void ShowScheduleLesson(DateTime date, long lessonId)
     {
         _viewDate = date.Date;
         MainTabs.SelectedItem = ScheduleTab;
         ReloadSchedule();
-        PulseDay(date.Date);
+        PulseLesson(lessonId);
     }
 
-    private void PulseDay(DateTime date)
+    private void PulseLesson(long lessonId)
     {
         _dayHighlightTimer?.Stop();
         foreach (var day in _days)
         {
             day.IsHighlighted = false;
+            foreach (var card in day.Lessons)
+            {
+                card.IsHighlighted = false;
+            }
         }
 
-        if (date.DayOfWeek == DayOfWeek.Sunday)
+        var lesson = _db.GetLessons(_settings.SelectedGroup).FirstOrDefault(item => item.Id == lessonId);
+        if (lesson is null)
         {
             return;
         }
 
-        var column = _days.FirstOrDefault(day => day.Date == date);
-        if (column is null)
+        var matches = _days
+            .SelectMany(day => day.Lessons)
+            .Where(card => HomeworkForm.MatchesSlot(lesson, card.Lesson))
+            .ToList();
+        if (matches.Count == 0)
         {
             return;
         }
 
-        column.IsHighlighted = true;
+        foreach (var card in matches)
+        {
+            card.IsHighlighted = true;
+        }
+
         _dayHighlightTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _dayHighlightTimer.Tick += (_, _) =>
         {
             _dayHighlightTimer.Stop();
-            column.IsHighlighted = false;
+            foreach (var card in matches)
+            {
+                card.IsHighlighted = false;
+            }
         };
         _dayHighlightTimer.Start();
     }
@@ -640,6 +659,7 @@ public partial class MainWindow : Window
 
         var comments = homework.Id > 0 ? _db.GetHomeworkComments(homework.Id) : [];
         var draft = new HomeworkCommentDraft(comments);
+        _commentDraft = draft;
         var editor = new HomeworkEditWindow(homework, isNew, lessons, comments);
         editor.CommentAdded += (_, text) =>
         {
@@ -666,7 +686,7 @@ public partial class MainWindow : Window
     {
         if (editor.OpenSchedule)
         {
-            ShowScheduleDay(editor.ScheduleDate);
+            ShowScheduleLesson(editor.ScheduleDate, editor.ScheduleLessonId);
             return true;
         }
 
@@ -699,6 +719,7 @@ public partial class MainWindow : Window
     {
         _editorEpoch++;
         EditorTitle.Text = title;
+        _editorClosing = false;
         var opening = EditorPanel.Visibility != Visibility.Visible;
         EditorHost.Content = editor;
         EditorPanel.Visibility = Visibility.Visible;
@@ -717,6 +738,7 @@ public partial class MainWindow : Window
 
     private void HideEditor()
     {
+        _editorClosing = true;
         var epoch = _editorEpoch;
         var animation = new DoubleAnimation(0, 560, TimeSpan.FromMilliseconds(160));
         animation.Completed += (_, _) =>
@@ -728,6 +750,7 @@ public partial class MainWindow : Window
 
             EditorPanel.Visibility = Visibility.Collapsed;
             EditorHost.Content = null;
+            _editorClosing = false;
         };
         EditorShift.BeginAnimation(TranslateTransform.XProperty, animation);
     }
@@ -740,6 +763,7 @@ public partial class MainWindow : Window
         }
 
         _editorEpoch++;
+        _editorClosing = false;
         EditorShift.BeginAnimation(TranslateTransform.XProperty, null);
         EditorShift.X = 560;
         EditorPanel.Visibility = Visibility.Collapsed;
@@ -772,6 +796,98 @@ public partial class MainWindow : Window
             CloseEditor();
         }
     }
+
+    private void Window_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (EditorPanel.Visibility != Visibility.Visible ||
+            _editorClosing ||
+            e.OriginalSource is not DependencyObject source)
+        {
+            return;
+        }
+
+        if (IsInsideEditor(source) || _savePrompt)
+        {
+            if (_savePrompt)
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (!EditorHasEdits())
+        {
+            CloseEditor_Click(this, e);
+            return;
+        }
+
+        e.Handled = true;
+        _savePrompt = true;
+        Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                PromptSaveEditor();
+            }
+            finally
+            {
+                _savePrompt = false;
+            }
+        });
+    }
+
+    private bool EditorHasEdits() => EditorHost.Content switch
+    {
+        LessonEditWindow lesson => lesson.HasEdits(),
+        HomeworkEditWindow homework => homework.HasEdits(_commentDraft?.HasEdits == true),
+        _ => false
+    };
+
+    private void PromptSaveEditor()
+    {
+        if (EditorPanel.Visibility != Visibility.Visible || _editorClosing || !EditorHasEdits())
+        {
+            return;
+        }
+
+        switch (AppDialog.PromptSave(this, "Сохранить изменения?", "В панели есть несохранённые правки."))
+        {
+            case SavePrompt.Save:
+                switch (EditorHost.Content)
+                {
+                    case LessonEditWindow lesson:
+                        lesson.Save();
+                        break;
+                    case HomeworkEditWindow homework:
+                        homework.Save();
+                        break;
+                }
+
+                break;
+            case SavePrompt.Discard:
+                CloseEditor_Click(this, new RoutedEventArgs());
+                break;
+        }
+    }
+
+    private bool IsInsideEditor(DependencyObject source)
+    {
+        for (DependencyObject? node = source; node is not null; node = ParentOf(node))
+        {
+            if (node == EditorPanel)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static DependencyObject? ParentOf(DependencyObject node) =>
+        node is Visual or System.Windows.Media.Media3D.Visual3D
+            ? VisualTreeHelper.GetParent(node)
+            : LogicalTreeHelper.GetParent(node);
 
     private void CloseEditor_Click(object sender, RoutedEventArgs e)
     {

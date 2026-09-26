@@ -12,6 +12,7 @@
             </ResourceDictionary.MergedDictionaries>
             <conv:DimConverter x:Key="DimConverter"/>
             <conv:HexBrushConverter x:Key="HexBrushConverter"/>
+            <conv:HomeworkReminderLabelConverter x:Key="HomeworkReminderLabelConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

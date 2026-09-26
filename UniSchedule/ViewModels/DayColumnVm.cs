@@ -32,8 +32,10 @@ public sealed class DayColumnVm : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-public sealed class LessonCardVm
+public sealed class LessonCardVm : INotifyPropertyChanged
 {
+    private bool _isHighlighted;
+
     public required Lesson Lesson { get; init; }
     public string TimeText { get; init; } = "";
     public string Subject { get; init; } = "";
@@ -45,6 +47,23 @@ public sealed class LessonCardVm
     public bool IsDimmed { get; init; }
     public string Accent { get; init; } = "#2563EB";
     public IReadOnlyList<HomeworkLinkVm> HomeworkLinks { get; init; } = [];
+
+    public bool IsHighlighted
+    {
+        get => _isHighlighted;
+        set
+        {
+            if (_isHighlighted == value)
+            {
+                return;
+            }
+
+            _isHighlighted = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsHighlighted)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 public sealed class HomeworkLinkVm

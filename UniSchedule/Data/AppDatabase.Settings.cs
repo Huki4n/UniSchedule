@@ -50,6 +50,14 @@ public sealed partial class AppDatabase
             settings.ReminderMinutes = AppSettings.NormalizeReminders([first, second]);
         }
 
+        if (map.ContainsKey("HomeworkReminderMinutes"))
+        {
+            var parsed = AppSettings.ParseHomeworkReminderList(map["HomeworkReminderMinutes"]);
+            settings.HomeworkReminderMinutes = parsed is [AppSettings.HomeworkMonthOffset, 1]
+                ? AppSettings.HomeworkReminderPresets.ToArray()
+                : parsed;
+        }
+
         settings.NotificationsEnabled = GetBool(map, "NotificationsEnabled", true);
         settings.Autostart = GetBool(map, "Autostart", false);
         settings.MinimizeToTray = GetBool(map, "MinimizeToTray", true);
@@ -63,6 +71,10 @@ public sealed partial class AppDatabase
         Set(db, "SelectedGroup", settings.SelectedGroup);
         Set(db, "SemesterStart", settings.SemesterStart.ToString("yyyy-MM-dd"));
         Set(db, "ReminderMinutes", AppSettings.FormatReminderList(settings.ReminderMinutes));
+        Set(db, "HomeworkReminderMinutes", AppSettings.FormatHomeworkReminderList(settings.HomeworkReminderMinutes));
+        using var dropDays = db.CreateCommand();
+        dropDays.CommandText = "DELETE FROM Settings WHERE Key = 'HomeworkReminderDays'";
+        dropDays.ExecuteNonQuery();
         Set(db, "NotificationsEnabled", settings.NotificationsEnabled ? "1" : "0");
         Set(db, "Autostart", settings.Autostart ? "1" : "0");
         Set(db, "MinimizeToTray", settings.MinimizeToTray ? "1" : "0");

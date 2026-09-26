@@ -29,6 +29,8 @@ public sealed class HomeworkCommentDraft
 
     public IReadOnlyList<HomeworkComment> Added => _added;
 
+    public bool HasEdits => _removedIds.Count > 0 || _added.Count > 0;
+
     public void Add(string? text, DateTime createdAt)
     {
         var body = (text ?? "").Trim();

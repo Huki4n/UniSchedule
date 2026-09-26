@@ -25,6 +25,18 @@
 
 `make import` и `make data` собирают эти аргументы. См. `Makefile`.
 
+## Установка
+
+`make installer` публикует Release `win-x64` со встроенным runtime и собирает `dist/UniSchedule-Setup.exe` скриптом `installer/UniSchedule.iss` (Inno Setup 6). Отдельный .NET на машине не нужен. Компилятор скрипта — Inno Setup, без него цель не собирается.
+
+`UniSchedule-Setup.exe` ставит приложение текущему пользователю в `%LocalAppData%\Programs\UniSchedule`. Права администратора не нужны. Мастер на русском: каталог и установка. В меню «Пуск» появляется «Расписание». В «Установленных приложениях» пункт «Расписание», удаление оттуда.
+
+Каталог установки не совпадает с каталогом базы. `schedule.db` лежит в `%LocalAppData%\UniSchedule` и при удалении остаётся. Значение `UniSchedule` в `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` удаляется, только если оно указывает на установленный exe.
+
+`make install` по-прежнему копирует публикацию в `%LocalAppData%\UniSchedule\app` без мастера. Если exe из этого каталога запущен, копирование останавливается. `make uninstall` снимает только эту копию и её ярлык, базу не трогает.
+
+Автозапуск из настроек по-прежнему пишет путь текущего exe.
+
 ## Один экземпляр
 
 Имена считает `AppLaunch`.
