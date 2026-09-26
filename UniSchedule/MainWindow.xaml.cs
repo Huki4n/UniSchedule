@@ -274,6 +274,7 @@ public partial class MainWindow : Window
             var count = await Task.Run(() => _db.ReplaceImported(result.Lessons));
             ImportPanel.Visibility = Visibility.Collapsed;
             AppDialog.Info(this, "Импорт", result.FormatStoredMessage(count, selectedGroup));
+            CloseEditor();
             ReloadGroups();
             ReloadBoard();
         }
