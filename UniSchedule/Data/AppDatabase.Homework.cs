@@ -34,35 +34,29 @@ public sealed partial class AppDatabase
     public long UpsertHomework(Homework homework)
     {
         using var db = Open();
-        using var cmd = db.CreateCommand();
-        if (homework.Id > 0)
+        WriteHomework(db, homework);
+        return homework.Id;
+    }
+
+    public long SaveHomeworkWithComments(
+        Homework homework,
+        IReadOnlyList<long> removedCommentIds,
+        IReadOnlyList<HomeworkComment> addedComments)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        WriteHomework(db, homework);
+        foreach (var id in removedCommentIds)
         {
-            cmd.CommandText =
-                """
-                UPDATE Homework SET
-                    LessonId=$lesson, Title=$title, Description=$description,
-                    Deadline=$deadline, IsDone=$done, Url=$url, ExtraUrl=$extra
-                WHERE Id=$id
-                """;
-            cmd.Parameters.AddWithValue("$id", homework.Id);
-        }
-        else
-        {
-            cmd.CommandText =
-                """
-                INSERT INTO Homework (LessonId, Title, Description, Deadline, IsDone, Url, ExtraUrl)
-                VALUES ($lesson, $title, $description, $deadline, $done, $url, $extra);
-                SELECT last_insert_rowid();
-                """;
+            DeleteHomeworkComment(db, id);
         }
 
-        BindHomework(cmd, homework);
-        var result = cmd.ExecuteScalar();
-        if (homework.Id <= 0 && result is not null)
+        foreach (var comment in addedComments)
         {
-            homework.Id = Convert.ToInt64(result);
+            AddHomeworkComment(db, homework.Id, comment.Body, comment.CreatedAt);
         }
 
+        tx.Commit();
         return homework.Id;
     }
 
@@ -108,13 +102,56 @@ public sealed partial class AppDatabase
 
     public void AddHomeworkComment(long homeworkId, string body, DateTime createdAt)
     {
+        using var db = Open();
+        AddHomeworkComment(db, homeworkId, body, createdAt);
+    }
+
+    public void DeleteHomeworkComment(long id)
+    {
+        using var db = Open();
+        DeleteHomeworkComment(db, id);
+    }
+
+    private static void WriteHomework(SqliteConnection db, Homework homework)
+    {
+        using var cmd = db.CreateCommand();
+        if (homework.Id > 0)
+        {
+            cmd.CommandText =
+                """
+                UPDATE Homework SET
+                    LessonId=$lesson, Title=$title, Description=$description,
+                    Deadline=$deadline, IsDone=$done, Url=$url, ExtraUrl=$extra
+                WHERE Id=$id
+                """;
+            cmd.Parameters.AddWithValue("$id", homework.Id);
+        }
+        else
+        {
+            cmd.CommandText =
+                """
+                INSERT INTO Homework (LessonId, Title, Description, Deadline, IsDone, Url, ExtraUrl)
+                VALUES ($lesson, $title, $description, $deadline, $done, $url, $extra);
+                SELECT last_insert_rowid();
+                """;
+        }
+
+        BindHomework(cmd, homework);
+        var result = cmd.ExecuteScalar();
+        if (homework.Id <= 0 && result is not null)
+        {
+            homework.Id = Convert.ToInt64(result);
+        }
+    }
+
+    private static void AddHomeworkComment(SqliteConnection db, long homeworkId, string body, DateTime createdAt)
+    {
         var text = body.Trim();
         if (homeworkId <= 0 || text.Length == 0)
         {
             return;
         }
 
-        using var db = Open();
         using var cmd = db.CreateCommand();
         cmd.CommandText =
             """
@@ -127,9 +164,8 @@ public sealed partial class AppDatabase
         cmd.ExecuteNonQuery();
     }
 
-    public void DeleteHomeworkComment(long id)
+    private static void DeleteHomeworkComment(SqliteConnection db, long id)
     {
-        using var db = Open();
         using var cmd = db.CreateCommand();
         cmd.CommandText = "DELETE FROM HomeworkComment WHERE Id=$id";
         cmd.Parameters.AddWithValue("$id", id);

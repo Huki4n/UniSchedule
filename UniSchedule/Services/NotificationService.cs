@@ -14,6 +14,7 @@ public sealed class NotificationService : IDisposable
     private AppSettings _settings;
     private bool _checking;
     private bool _failureNotified;
+    private int _pauseDepth;
 
     public event Action<Exception>? Failed;
 
@@ -44,6 +45,27 @@ public sealed class NotificationService : IDisposable
         Check();
     }
 
+    public void Pause()
+    {
+        _pauseDepth++;
+        _timer.Stop();
+    }
+
+    public void Resume()
+    {
+        if (_pauseDepth > 0)
+        {
+            _pauseDepth--;
+        }
+
+        if (_pauseDepth == 0)
+        {
+            _timer.Start();
+        }
+    }
+
+    internal bool IsPaused => _pauseDepth > 0;
+
     public void ShowTest(Lesson? lesson)
     {
         var error = _show(
@@ -66,7 +88,7 @@ public sealed class NotificationService : IDisposable
 
     private void Check()
     {
-        if (_checking)
+        if (_checking || _pauseDepth > 0)
         {
             return;
         }

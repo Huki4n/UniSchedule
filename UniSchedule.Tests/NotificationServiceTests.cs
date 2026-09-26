@@ -71,6 +71,22 @@ public sealed class NotificationServiceTests : IDisposable
         Assert.Equal(2, notices);
     }
 
+    [Fact]
+    public void Pause_TracksNestedDepthUntilMatchingResume()
+    {
+        var service = Create((_, _) => null);
+        Assert.False(service.IsPaused);
+
+        service.Pause();
+        service.Pause();
+        Assert.True(service.IsPaused);
+
+        service.Resume();
+        Assert.True(service.IsPaused);
+        service.Resume();
+        Assert.False(service.IsPaused);
+    }
+
     private NotificationService Create(Func<Lesson, int, Exception?> show)
     {
         var settings = new AppSettings

@@ -434,6 +434,49 @@ public sealed class AppDatabaseTests : IDisposable
         Assert.Equal(second.Id, loaded[1].Id);
     }
 
+    [Fact]
+    public void SaveHomeworkWithComments_AppliesUpsertAndCommentEditsTogether()
+    {
+        var lessonId = _database.UpsertLesson(new Lesson
+        {
+            GroupCode = "11-321",
+            Subject = "Сети",
+            DayOfWeek = DayOfWeek.Monday
+        });
+        var homework = new Homework
+        {
+            LessonId = lessonId,
+            Title = "ЛР",
+            Deadline = new DateTime(2026, 9, 25)
+        };
+        _database.UpsertHomework(homework);
+        _database.AddHomeworkComment(homework.Id, "старый", new DateTime(2026, 9, 25, 10, 0, 0));
+        var keep = Assert.Single(_database.GetHomeworkComments(homework.Id));
+        _database.AddHomeworkComment(homework.Id, "удалить", new DateTime(2026, 9, 25, 11, 0, 0));
+        var remove = _database.GetHomeworkComments(homework.Id).Single(comment => comment.Body == "удалить");
+
+        homework.Title = "ЛР 2";
+        _database.SaveHomeworkWithComments(
+            homework,
+            [remove.Id],
+            [
+                new HomeworkComment
+                {
+                    Body = "новый",
+                    CreatedAt = new DateTime(2026, 9, 25, 12, 30, 55)
+                }
+            ]);
+
+        var loaded = Assert.Single(_database.GetHomework("11-321"));
+        Assert.Equal("ЛР 2", loaded.Title);
+        var comments = _database.GetHomeworkComments(homework.Id);
+        Assert.Equal(2, comments.Count);
+        Assert.Contains(comments, comment => comment.Id == keep.Id && comment.Body == "старый");
+        var added = Assert.Single(comments, comment => comment.Body == "новый");
+        Assert.Equal(new DateTime(2026, 9, 25, 12, 30, 0), added.CreatedAt);
+        Assert.DoesNotContain(comments, comment => comment.Id == remove.Id);
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();

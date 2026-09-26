@@ -265,6 +265,7 @@ public partial class MainWindow : Window
         var selectedGroup = _settings.SelectedGroup;
         ImportStatus.Text = "Читаю лист";
         ImportPanel.Visibility = Visibility.Visible;
+        _notifications.Pause();
         try
         {
             var progress = new Progress<string>(text => ImportStatus.Text = text);
@@ -282,6 +283,10 @@ public partial class MainWindow : Window
         {
             ImportPanel.Visibility = Visibility.Collapsed;
             AppDialog.Info(this, "Импорт не удался", ex.Message);
+        }
+        finally
+        {
+            _notifications.Resume();
         }
     }
 
@@ -655,16 +660,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            _db.UpsertHomework(homework);
-            foreach (var id in draft.RemovedIds)
-            {
-                _db.DeleteHomeworkComment(id);
-            }
-
-            foreach (var comment in draft.Added)
-            {
-                _db.AddHomeworkComment(homework.Id, comment.Body, comment.CreatedAt);
-            }
+            _db.SaveHomeworkWithComments(homework, draft.RemovedIds, draft.Added);
         }
 
         ReloadBoard();
