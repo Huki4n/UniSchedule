@@ -37,4 +37,19 @@ public class HomeworkCommentDraftTests
         Assert.Equal([3L], draft.RemovedIds);
         Assert.Equal("был", existing.Body);
     }
+
+    [Fact]
+    public void Draft_HasEdits_WhenCommentAddedOrRemoved()
+    {
+        var existing = new HomeworkComment { Id = 3, HomeworkId = 8, Body = "был" };
+        var draft = new HomeworkCommentDraft([existing]);
+
+        Assert.False(draft.HasEdits);
+        draft.Add("новый", new DateTime(2026, 9, 25, 11, 0, 0));
+        Assert.True(draft.HasEdits);
+        draft.Remove(draft.Added[0].Id);
+        Assert.False(draft.HasEdits);
+        draft.Remove(3);
+        Assert.True(draft.HasEdits);
+    }
 }

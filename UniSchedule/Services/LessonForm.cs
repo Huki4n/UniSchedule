@@ -1,3 +1,5 @@
+using UniSchedule.Models;
+
 namespace UniSchedule.Services;
 
 public static class LessonForm
@@ -46,4 +48,36 @@ public static class LessonForm
         error = null;
         return true;
     }
+
+    public readonly record struct Fields(
+        DayOfWeek Day,
+        string Start,
+        string End,
+        string Subject,
+        string LessonType,
+        string Teacher,
+        string Room,
+        string MeetingUrl,
+        string LmsUrl,
+        WeekParity Parity,
+        string WeekFrom,
+        string WeekTo,
+        string Notes);
+
+    public static bool HasEdits(Fields baseline, Fields current) => Normalize(baseline) != Normalize(current);
+
+    private static Fields Normalize(Fields fields) => fields with
+    {
+        Start = fields.Start.Trim(),
+        End = fields.End.Trim(),
+        Subject = fields.Subject.Trim(),
+        LessonType = fields.LessonType.Trim(),
+        Teacher = fields.Teacher.Trim(),
+        Room = fields.Room.Trim(),
+        MeetingUrl = fields.MeetingUrl.Trim(),
+        LmsUrl = fields.LmsUrl.Trim(),
+        WeekFrom = fields.WeekFrom.Trim(),
+        WeekTo = fields.WeekTo.Trim(),
+        Notes = fields.Notes.Trim()
+    };
 }

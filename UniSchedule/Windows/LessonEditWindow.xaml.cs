@@ -12,6 +12,7 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
     private readonly bool _hasRelated;
     private readonly int _homeworkCount;
     private readonly string? _rollbackSubject;
+    private LessonForm.Fields _baseline;
 
     public bool Deleted { get; private set; }
 
@@ -43,6 +44,7 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
         }
 
         Fill();
+        _baseline = ReadFields();
     }
 
     public Lesson Result => _lesson;
@@ -125,6 +127,31 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
     }
 
     public void RequestCancel() => Finish(accepted: false);
+
+    public void Save() => Save_Click(this, new RoutedEventArgs());
+
+    public bool HasEdits() => LessonForm.HasEdits(_baseline, ReadFields());
+
+    private LessonForm.Fields ReadFields()
+    {
+        var day = DayBox.SelectedItem is ComboBoxItem { Tag: DayOfWeek selected } ? selected : DayOfWeek.Monday;
+        var type = TypeBox.SelectedItem is ComboBoxItem { Tag: string code } ? code : "";
+        var parity = ParityBox.SelectedItem is ComboBoxItem { Tag: WeekParity value } ? value : WeekParity.All;
+        return new LessonForm.Fields(
+            day,
+            StartBox.Text,
+            EndBox.Text,
+            SubjectBox.Text,
+            type,
+            TeacherBox.Text,
+            RoomBox.Text,
+            MeetingBox.Text,
+            LmsBox.Text,
+            parity,
+            WeekFromBox.Text,
+            WeekToBox.Text,
+            NotesBox.Text);
+    }
 
     private void RollbackSubject_Click(object sender, RoutedEventArgs e)
     {

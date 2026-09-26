@@ -24,6 +24,7 @@ public sealed class AppDatabaseTests : IDisposable
             SelectedGroup = "11-405",
             SemesterStart = new DateTime(2026, 9, 1),
             ReminderMinutes = [10, 45, 10, 5],
+            HomeworkReminderMinutes = [15, AppSettings.HomeworkMonthOffset, 15],
             NotificationsEnabled = false,
             Autostart = true,
             MinimizeToTray = false
@@ -35,6 +36,7 @@ public sealed class AppDatabaseTests : IDisposable
         Assert.Equal("11-405", loaded.SelectedGroup);
         Assert.Equal(new DateTime(2026, 9, 1), loaded.SemesterStart);
         Assert.Equal([45, 10, 5], loaded.ReminderMinutes);
+        Assert.Equal([AppSettings.HomeworkMonthOffset, 15], loaded.HomeworkReminderMinutes);
         Assert.False(loaded.NotificationsEnabled);
         Assert.True(loaded.Autostart);
         Assert.False(loaded.MinimizeToTray);
@@ -53,6 +55,31 @@ public sealed class AppDatabaseTests : IDisposable
         Assert.Empty(_database.GetSettings().ReminderMinutes);
     }
 
+    [Fact]
+    public void Settings_MissingHomeworkReminderMinutes_DefaultsToPresets()
+    {
+        Assert.Equal(AppSettings.HomeworkReminderPresets, _database.GetSettings().HomeworkReminderMinutes);
+
+        var path = Path.Combine(_directory, "schedule.db");
+        WriteSetting(path, "HomeworkReminderDays", "3");
+        Assert.Equal(AppSettings.HomeworkReminderPresets, _database.GetSettings().HomeworkReminderMinutes);
+
+        WriteSetting(path, "HomeworkReminderMinutes", "");
+        Assert.Empty(_database.GetSettings().HomeworkReminderMinutes);
+
+        WriteSetting(path, "HomeworkReminderMinutes", "месяц,1,0");
+        Assert.Equal(AppSettings.HomeworkReminderPresets, _database.GetSettings().HomeworkReminderMinutes);
+
+        WriteSetting(path, "HomeworkReminderMinutes", "месяц,15");
+        Assert.Equal([AppSettings.HomeworkMonthOffset, 15], _database.GetSettings().HomeworkReminderMinutes);
+
+        _database.SaveSettings(new AppSettings());
+        Assert.Null(ReadSetting(path, "HomeworkReminderDays"));
+        Assert.Equal(
+            AppSettings.FormatHomeworkReminderList(AppSettings.HomeworkReminderPresets),
+            ReadSetting(path, "HomeworkReminderMinutes"));
+    }
+
     private static void WriteSetting(string path, string key, string value)
     {
         using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path }.ToString());
@@ -66,6 +93,16 @@ public sealed class AppDatabaseTests : IDisposable
         cmd.Parameters.AddWithValue("$k", key);
         cmd.Parameters.AddWithValue("$v", value);
         cmd.ExecuteNonQuery();
+    }
+
+    private static string? ReadSetting(string path, string key)
+    {
+        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path }.ToString());
+        connection.Open();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT Value FROM Settings WHERE Key=$k";
+        cmd.Parameters.AddWithValue("$k", key);
+        return cmd.ExecuteScalar() as string;
     }
 
     [Fact]
@@ -263,6 +300,45 @@ public sealed class AppDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void HomeworkNotificationLog_IsIdempotentPerDayAndOffset()
+    {
+        var date = new DateTime(2026, 9, 4);
+        Assert.False(_database.WasHomeworkNotificationSent(4, date, 0));
+        _database.MarkHomeworkNotificationSent(4, date, 0);
+        _database.MarkHomeworkNotificationSent(4, date, 0);
+        Assert.True(_database.WasHomeworkNotificationSent(4, date, 0));
+        Assert.False(_database.WasHomeworkNotificationSent(4, date, 1));
+    }
+
+    [Fact]
+    public void HomeworkNotificationLog_ReplacesDayOffsetColumn()
+    {
+        var path = Path.Combine(_directory, "schedule.db");
+        using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path }.ToString()))
+        {
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText =
+                """
+                DROP TABLE HomeworkNotificationLog;
+                CREATE TABLE HomeworkNotificationLog (
+                    HomeworkId INTEGER NOT NULL,
+                    FireDate TEXT NOT NULL,
+                    OffsetDays INTEGER NOT NULL,
+                    PRIMARY KEY (HomeworkId, FireDate, OffsetDays)
+                );
+                """;
+            cmd.ExecuteNonQuery();
+        }
+
+        var reopened = new AppDatabase(path);
+        var date = new DateTime(2026, 9, 4);
+        reopened.MarkHomeworkNotificationSent(4, date, 1);
+        Assert.True(reopened.WasHomeworkNotificationSent(4, date, 1));
+        Assert.False(reopened.WasHomeworkNotificationSent(4, date, AppSettings.HomeworkMonthOffset));
+    }
+
+    [Fact]
     public void DefaultPath_IsUnderLocalAppData()
     {
         var expected = Path.Combine(
@@ -390,6 +466,7 @@ public sealed class AppDatabaseTests : IDisposable
         _database.AddHomeworkComment(homeworkId, "сдать", day);
         _database.RememberSubjectRollback(lessonId, "Старое", day);
         _database.MarkNotificationSent(lessonId, day, 15);
+        _database.MarkHomeworkNotificationSent(homeworkId, day, 1);
 
         _database.ClearStoredData();
 
@@ -398,6 +475,7 @@ public sealed class AppDatabaseTests : IDisposable
         Assert.Empty(_database.GetHomeworkComments(homeworkId));
         Assert.Null(_database.GetSubjectRollback(lessonId, day));
         Assert.False(_database.WasNotificationSent(lessonId, day, 15));
+        Assert.False(_database.WasHomeworkNotificationSent(homeworkId, day, 1));
         var settings = _database.GetSettings();
         Assert.Equal("11-405", settings.SelectedGroup);
         Assert.Equal(new DateTime(2026, 9, 1), settings.SemesterStart);

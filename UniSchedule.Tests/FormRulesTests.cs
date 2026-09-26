@@ -1,3 +1,4 @@
+using UniSchedule.Converters;
 using UniSchedule.Models;
 using UniSchedule.Services;
 
@@ -35,6 +36,39 @@ public class FormRulesTests
 
         Assert.False(HomeworkForm.TryValidate(4, "ЛР", null, out var deadlineError));
         Assert.Equal(HomeworkForm.DeadlineError, deadlineError);
+    }
+
+    [Fact]
+    public void HomeworkForm_MatchesSlotBySubjectDayAndStart()
+    {
+        var lesson = new Lesson
+        {
+            Subject = "Психология, 1-10 нед. лек",
+            DayOfWeek = DayOfWeek.Wednesday,
+            Start = new TimeSpan(13, 50, 0)
+        };
+        var same = new Lesson
+        {
+            Subject = "психология, с 10 нед.прак",
+            DayOfWeek = DayOfWeek.Wednesday,
+            Start = new TimeSpan(13, 50, 0)
+        };
+        var otherTime = new Lesson
+        {
+            Subject = "Психология",
+            DayOfWeek = DayOfWeek.Wednesday,
+            Start = new TimeSpan(8, 30, 0)
+        };
+        var otherDay = new Lesson
+        {
+            Subject = "Психология",
+            DayOfWeek = DayOfWeek.Monday,
+            Start = new TimeSpan(13, 50, 0)
+        };
+
+        Assert.True(HomeworkForm.MatchesSlot(lesson, same));
+        Assert.False(HomeworkForm.MatchesSlot(lesson, otherTime));
+        Assert.False(HomeworkForm.MatchesSlot(lesson, otherDay));
     }
 
     [Fact]
@@ -119,9 +153,48 @@ public class FormRulesTests
         Assert.True(SettingsForm.TryParseReminder("15", out var minutes));
         Assert.Equal(15, minutes);
         Assert.Equal([60, 15], AppSettings.NormalizeReminders([15, 0, 60, 15]));
+        Assert.False(SettingsForm.TryParseHomeworkReminder("-1", out _));
+        Assert.False(SettingsForm.TryParseHomeworkReminder("0", out _));
+        Assert.False(SettingsForm.TryParseHomeworkReminder("день", out _));
+        Assert.True(SettingsForm.TryParseHomeworkReminder("месяц", out var month));
+        Assert.Equal(AppSettings.HomeworkMonthOffset, month);
+        Assert.True(SettingsForm.TryParseHomeworkReminder("1", out var oneMinute));
+        Assert.Equal(1, oneMinute);
+        Assert.Equal(
+            [AppSettings.HomeworkMonthOffset, 2],
+            AppSettings.NormalizeHomeworkReminders([2, 0, AppSettings.HomeworkMonthOffset, 2]));
+        Assert.Equal("за месяц", HomeworkReminderLabelConverter.Format(AppSettings.HomeworkMonthOffset));
+        Assert.Equal("за 1 мин.", HomeworkReminderLabelConverter.Format(1));
+        Assert.Equal("за 7 дней", HomeworkReminderLabelConverter.Format(AppSettings.HomeworkPresetWeek));
+        Assert.Equal("за 4 часа", HomeworkReminderLabelConverter.Format(AppSettings.HomeworkPresetFourHours));
         Assert.Equal(AppSettings.DefaultGroupCode, SettingsForm.NormalizeGroup("  "));
         Assert.Equal("11-405", SettingsForm.NormalizeGroup(" 11-405 "));
         Assert.Equal(AppSettings.DefaultSemesterStart, SettingsForm.NormalizeSemesterStart(null));
+    }
+
+    [Fact]
+    public void LessonForm_HasEdits_IgnoresTrim()
+    {
+        var baseline = new LessonForm.Fields(
+            DayOfWeek.Monday, "08:30", "10:00", "Сети", "lecture", "", "", "", "",
+            WeekParity.All, "", "", "");
+
+        Assert.False(LessonForm.HasEdits(baseline, baseline with { Subject = "  Сети  " }));
+        Assert.True(LessonForm.HasEdits(baseline, baseline with { Subject = "Базы" }));
+        Assert.True(LessonForm.HasEdits(baseline, baseline with { Start = "09:00" }));
+    }
+
+    [Fact]
+    public void HomeworkForm_HasEdits_SeesCommentDraftAndDeadline()
+    {
+        var baseline = new HomeworkForm.Fields(
+            4, "ЛР", "", new DateTime(2026, 9, 15), false, "", "", "", false);
+
+        Assert.False(HomeworkForm.HasEdits(baseline, baseline with { Title = " ЛР ", Deadline = new DateTime(2026, 9, 15, 18, 0, 0) }));
+        Assert.True(HomeworkForm.HasEdits(baseline, baseline with { PendingComment = "черновик" }));
+        Assert.False(HomeworkForm.HasEdits(baseline, baseline with { PendingComment = "  " }));
+        Assert.True(HomeworkForm.HasEdits(baseline, baseline with { CommentsChanged = true }));
+        Assert.True(HomeworkForm.HasEdits(baseline, baseline with { Deadline = new DateTime(2026, 9, 16) }));
     }
 
     [Fact]
@@ -132,6 +205,7 @@ public class FormRulesTests
             SelectedGroup = "11-405",
             SemesterStart = new DateTime(2026, 2, 1),
             ReminderMinutes = [5, 30],
+            HomeworkReminderMinutes = [1, AppSettings.HomeworkMonthOffset],
             NotificationsEnabled = false,
             Autostart = true,
             MinimizeToTray = false
@@ -143,8 +217,11 @@ public class FormRulesTests
         Assert.Equal("11-405", settings.SelectedGroup);
         Assert.Equal(new DateTime(2026, 2, 1), clone.SemesterStart);
         Assert.Equal([30, 5], clone.ReminderMinutes);
+        Assert.Equal([AppSettings.HomeworkMonthOffset, 1], clone.HomeworkReminderMinutes);
         clone.ReminderMinutes = [1];
+        clone.HomeworkReminderMinutes = [4];
         Assert.Equal([30, 5], settings.ReminderMinutes);
+        Assert.Equal([AppSettings.HomeworkMonthOffset, 1], settings.HomeworkReminderMinutes);
         Assert.False(clone.NotificationsEnabled);
         Assert.True(clone.Autostart);
         Assert.False(clone.MinimizeToTray);

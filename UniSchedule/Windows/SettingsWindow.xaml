@@ -66,6 +66,42 @@
                         MinWidth="120" Height="36" Margin="8,0,0,0" Click="RemoveReminder_Click"/>
             </Grid>
 
+            <TextBlock Text="Напоминание о сдаче" Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
+            <WrapPanel x:Name="HomeworkReminderPresets" Margin="0,0,0,8"/>
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="HomeworkReminderBox" AutomationProperties.AutomationId="HomeworkReminderMinutes" Height="36"
+                         PreviewKeyDown="HomeworkReminderBox_OnPreviewKeyDown"/>
+                <Button Grid.Column="1" Content="Добавить" AutomationProperties.AutomationId="AddHomeworkReminder"
+                        MinWidth="120" Height="36" Padding="16,0" FontSize="15" VerticalAlignment="Center"
+                        Margin="8,0,0,0" Click="AddHomeworkReminder_Click"/>
+            </Grid>
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid>
+                    <ComboBox x:Name="HomeworkReminderList" Height="36" AutomationProperties.AutomationId="HomeworkReminderList">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource HomeworkReminderLabelConverter}}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Border IsHitTestVisible="False" Margin="12,0,32,0" Background="{StaticResource AppCard}">
+                        <TextBlock x:Name="HomeworkReminderSummary" VerticalAlignment="Center" FontSize="16"
+                                   Foreground="{StaticResource AppText}"/>
+                    </Border>
+                </Grid>
+                <Button x:Name="HomeworkReminderRemoveButton" Grid.Column="1" Content="Удалить"
+                        AutomationProperties.AutomationId="HomeworkReminderRemove"
+                        MinWidth="120" Height="36" Margin="8,0,0,0" Click="RemoveHomeworkReminder_Click"/>
+            </Grid>
+
             <CheckBox x:Name="NotifyBox" Content="Включить уведомления" Margin="0,0,0,12"/>
             <CheckBox x:Name="TrayBox" AutomationProperties.AutomationId="MinimizeToTray" Content="Сворачивать в трей при закрытии" Margin="0,0,0,12"/>
             <CheckBox x:Name="AutostartBox" Content="Запускать вместе с Windows" Margin="0,0,0,16"/>

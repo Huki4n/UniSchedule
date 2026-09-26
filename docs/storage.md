@@ -33,7 +33,7 @@
 
 Импорт описан в [loading.md](loading.md): удаляются только строки `Source='imported'`. Домашки этих пар перепривязываются или удаляются, как описано в [homework.md](homework.md). После замены удаляются строки `SubjectRollback`, чей `LessonId` больше не существует.
 
-`ClearStoredData` одной транзакцией удаляет `HomeworkComment`, `Homework`, `SubjectRollback`, `NotificationLog` и `Lessons`. `Settings` не меняется.
+`ClearStoredData` одной транзакцией удаляет `HomeworkComment`, `Homework`, `SubjectRollback`, `NotificationLog`, `HomeworkNotificationLog` и `Lessons`. `Settings` не меняется.
 
 ## SubjectRollback
 
@@ -54,14 +54,19 @@
 | `SelectedGroup` | текст | `11-321` |
 | `SemesterStart` | сначала `yyyy-MM-dd` в инвариантной культуре, затем `DateTime.TryParse` | `2026-09-01` |
 | `ReminderMinutes` | числа больше 0 через запятую, по убыванию, без повторов. Пустая строка — напоминаний нет | `60,15` |
+| `HomeworkReminderMinutes` | `месяц` и числа больше 0 через запятую. Месяц первый, затем минуты по убыванию, без повторов. Пустая строка — напоминаний о сдаче нет | `10080,7200,4320,1440,720,240` |
 | `NotificationsEnabled` | `1` / `0` | включено |
 | `Autostart` | `1` / `0` | выключено |
 | `MinimizeToTray` | `1` / `0` | включено |
 
 Флаги `NotificationsEnabled`, `Autostart` и `MinimizeToTray` читают `1`, `true` и `True`. Другое значение уже существующего ключа выключает флаг. Нет ключа — берётся значение по умолчанию.
 
-`SaveSettings` пишет дату как `yyyy-MM-dd`, напоминания как `ReminderMinutes` и флаги как `1`/`0`. Старые ключи `FirstReminderMinutes` и `SecondReminderMinutes` больше не записываются. Если `ReminderMinutes` в базе нет, список собирается из этих двух ключей: отсутствующий ключ даёт 60 и 15, ноль отбрасывается. Запись идёт одной транзакцией. При старте настройки читаются и сразу сохраняются снова.
+`SaveSettings` пишет дату как `yyyy-MM-dd`, напоминания как `ReminderMinutes` и `HomeworkReminderMinutes`, флаги как `1`/`0`. Старые ключи `FirstReminderMinutes`, `SecondReminderMinutes` и `HomeworkReminderDays` больше не записываются: последний при сохранении удаляется и не читается. Если `ReminderMinutes` в базе нет, список собирается из первых двух ключей: отсутствующий ключ даёт 60 и 15, ноль отбрасывается. Если `HomeworkReminderMinutes` нет, остаются пресеты: 7, 5, 3 и 1 день, 12 и 4 часа. Уже записанный список ровно `месяц,1` читается так же: это прежний автосписок, не выбор пользователя. Запись идёт одной транзакцией. При старте настройки читаются и сразу сохраняются снова.
 
 ## NotificationLog
 
-Первичный ключ `(LessonId, FireDate, OffsetMinutes)`. `FireDate` — `yyyy-MM-dd`. `WasNotificationSent` ищет строку. `MarkNotificationSent` делает `INSERT OR IGNORE`. Кто пишет отметку — в [notifications.md](notifications.md).
+Первичный ключ `(LessonId, FireDate, OffsetMinutes)`. `FireDate` — `yyyy-MM-dd`. `WasNotificationSent` ищет строку. `MarkNotificationSent` делает `INSERT OR IGNORE`. Удаление пары журнал не чистит. Кто пишет отметку — в [notifications.md](notifications.md).
+
+## HomeworkNotificationLog
+
+Первичный ключ `(HomeworkId, FireDate, OffsetMinutes)`. `FireDate` — `yyyy-MM-dd` начала окна. Месяц хранится как смещение `-1`, не как число минут. `WasHomeworkNotificationSent` ищет строку. `MarkHomeworkNotificationSent` делает `INSERT OR IGNORE`. Удаление домашки журнал не чистит. Если в уже открытой базе колонка называется `OffsetDays`, таблица при старте удаляется и создаётся заново: в ней были только отметки дневных сроков.

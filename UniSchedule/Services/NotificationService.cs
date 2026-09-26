@@ -10,6 +10,7 @@ public sealed class NotificationService : IDisposable
     private readonly AppDatabase _db;
     private readonly DispatcherTimer _timer;
     private readonly Func<Lesson, int, Exception?> _show;
+    private readonly Func<Homework, string, int, Exception?> _showHomework;
     private readonly string _failureLogPath;
     private AppSettings _settings;
     private bool _checking;
@@ -19,7 +20,7 @@ public sealed class NotificationService : IDisposable
     public event Action<Exception>? Failed;
 
     public NotificationService(AppDatabase db, AppSettings settings)
-        : this(db, settings, TryShow, ToastLog.DefaultPath)
+        : this(db, settings, TryShow, TryShowHomework, ToastLog.DefaultPath)
     {
     }
 
@@ -28,10 +29,21 @@ public sealed class NotificationService : IDisposable
         AppSettings settings,
         Func<Lesson, int, Exception?> show,
         string failureLogPath)
+        : this(db, settings, show, TryShowHomework, failureLogPath)
+    {
+    }
+
+    internal NotificationService(
+        AppDatabase db,
+        AppSettings settings,
+        Func<Lesson, int, Exception?> show,
+        Func<Homework, string, int, Exception?> showHomework,
+        string failureLogPath)
     {
         _db = db;
         _settings = settings;
         _show = show;
+        _showHomework = showHomework;
         _failureLogPath = failureLogPath;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _timer.Tick += (_, _) => Check();
@@ -111,17 +123,33 @@ public sealed class NotificationService : IDisposable
             return;
         }
 
-        var due = NotificationPlanner.Collect(
-            _db.GetLessons(_settings.SelectedGroup),
-            _settings,
-            now,
-            _db.WasNotificationSent);
+        var lessons = _db.GetLessons(_settings.SelectedGroup);
+        var due = NotificationPlanner.Collect(lessons, _settings, now, _db.WasNotificationSent);
         foreach (var item in due)
         {
             var error = _show(item.Lesson, item.OffsetMinutes);
             if (error is null)
             {
                 _db.MarkNotificationSent(item.Lesson.Id, now.Date, item.OffsetMinutes);
+                continue;
+            }
+
+            Report(error, notify: false);
+        }
+
+        var subjects = lessons.ToDictionary(lesson => lesson.Id, lesson => lesson.Subject);
+        var homeworkDue = NotificationPlanner.CollectHomework(
+            _db.GetHomework(_settings.SelectedGroup),
+            _settings,
+            now,
+            _db.WasHomeworkNotificationSent);
+        foreach (var item in homeworkDue)
+        {
+            subjects.TryGetValue(item.Homework.LessonId, out var subject);
+            var error = _showHomework(item.Homework, subject ?? "", item.OffsetMinutes);
+            if (error is null)
+            {
+                _db.MarkHomeworkNotificationSent(item.Homework.Id, item.FireDate, item.OffsetMinutes);
                 continue;
             }
 
@@ -188,5 +216,46 @@ public sealed class NotificationService : IDisposable
         {
             return ex;
         }
+    }
+
+    private static Exception? TryShowHomework(Homework homework, string subject, int offsetMinutes)
+    {
+        var when = NotificationPlanner.HomeworkDueText(offsetMinutes);
+        var body = string.IsNullOrWhiteSpace(subject) ? when : $"{subject} · {when}";
+        var title = string.IsNullOrWhiteSpace(homework.Title) ? "Домашка" : homework.Title;
+
+        try
+        {
+            var builder = new ToastContentBuilder()
+                .AddHeader("unischedule-homework", "Домашка", "action=open")
+                .AddText(title)
+                .AddText(body)
+                .AddAttributionText("UniSchedule");
+
+            if (TryHomeworkLink(homework, out var uri))
+            {
+                builder.AddButton(new ToastButton()
+                    .SetContent("Открыть ссылку")
+                    .SetProtocolActivation(uri));
+            }
+
+            builder.SetToastDuration(ToastDuration.Short);
+            builder.Show();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
+    }
+
+    private static bool TryHomeworkLink(Homework homework, out Uri uri)
+    {
+        if (MeetingLinks.TryGetWebUri(homework.Url, out uri))
+        {
+            return true;
+        }
+
+        return MeetingLinks.TryGetWebUri(homework.ExtraUrl, out uri);
     }
 }

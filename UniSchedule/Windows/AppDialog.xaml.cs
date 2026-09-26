@@ -2,11 +2,29 @@ using System.Windows;
 
 namespace UniSchedule.Windows;
 
+public enum SavePrompt
+{
+    Save,
+    Discard,
+    Stay
+}
+
 public partial class AppDialog : Window
 {
+    private SavePrompt _prompt = SavePrompt.Stay;
+
     private AppDialog()
     {
         InitializeComponent();
+    }
+
+    public static SavePrompt PromptSave(Window? owner, string title, string message)
+    {
+        var dialog = Create(owner, title, message, "Сохранить", showCancel: true);
+        dialog.Width = 520;
+        dialog.DiscardButton.Visibility = Visibility.Visible;
+        dialog.ShowDialog();
+        return dialog._prompt;
     }
 
     public static bool Confirm(Window? owner, string title, string message, string okText = "Удалить")
@@ -36,7 +54,21 @@ public partial class AppDialog : Window
         return dialog;
     }
 
-    private void Ok_Click(object sender, RoutedEventArgs e) => DialogResult = true;
+    private void Ok_Click(object sender, RoutedEventArgs e)
+    {
+        _prompt = SavePrompt.Save;
+        DialogResult = true;
+    }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+    private void Discard_Click(object sender, RoutedEventArgs e)
+    {
+        _prompt = SavePrompt.Discard;
+        DialogResult = true;
+    }
+
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        _prompt = SavePrompt.Stay;
+        DialogResult = false;
+    }
 }

@@ -2,10 +2,11 @@
 SHELL := cmd.exe
 .SHELLFLAGS := /C
 
-.PHONY: help build test test-unit test-e2e run build-debug test-debug test-debug-unit test-debug-e2e import data
+.PHONY: help build test test-unit test-e2e run build-debug test-debug test-debug-unit test-debug-e2e import data publish installer install uninstall
 
 TFM := net10.0-windows10.0.17763.0
 EXE := UniSchedule/bin/Release/$(TFM)/UniSchedule.exe
+DIST := dist/UniSchedule
 
 help:
 	@echo build            Release build
@@ -19,6 +20,10 @@ help:
 	@echo test-debug-e2e   Debug tests, category E2E
 	@echo import           make import FILE=file.xlsx OUT=report.txt
 	@echo data             make data DB=D:\temp\schedule.db
+	@echo publish          Self-contained win-x64 into dist/UniSchedule
+	@echo installer        Build dist/UniSchedule-Setup.exe
+	@echo install          Copy dist into the user profile and add a Start menu shortcut
+	@echo uninstall        Remove the installed copy and shortcut, keep the database
 
 # Собрать приложение в Release.
 build:
@@ -69,3 +74,20 @@ import:
 data:
 	@if "$(DB)"=="" (echo make data DB=D:\temp\schedule.db & exit /b 1)
 	dotnet run --project UniSchedule/UniSchedule.csproj -c Release -- --data "$(DB)"
+
+# Опубликовать Release win-x64 со встроенным runtime в dist/UniSchedule.
+publish:
+	dotnet publish UniSchedule/UniSchedule.csproj -c Release -r win-x64 --self-contained true -o $(DIST)
+
+# Собрать dist/UniSchedule-Setup.exe. Нужен Inno Setup 6.
+installer: publish
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-installer.ps1
+
+# Скопировать публикацию в %LocalAppData%\UniSchedule\app и создать ярлык «Расписание».
+install:
+	@if not exist "$(DIST)\UniSchedule.exe" (echo Сначала выполните make publish & exit /b 1)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1 -Action install -Source "$(abspath $(DIST))"
+
+# Удалить каталог app и ярлык. Базу schedule.db не трогает.
+uninstall:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1 -Action uninstall

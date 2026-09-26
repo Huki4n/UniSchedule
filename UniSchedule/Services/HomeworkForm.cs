@@ -17,6 +17,11 @@ public static class HomeworkForm
     public static string SlotLabel(Lesson lesson) =>
         $"{AcademicCalendar.DayName(lesson.DayOfWeek)} · {lesson.Start:hh\\:mm}";
 
+    public static bool MatchesSlot(Lesson lesson, Lesson card) =>
+        lesson.DayOfWeek == card.DayOfWeek
+        && lesson.Start == card.Start
+        && string.Equals(SubjectTitle(lesson.Subject), SubjectTitle(card.Subject), StringComparison.OrdinalIgnoreCase);
+
     public static string SubjectTitle(string? subject)
     {
         var text = (subject ?? "").Trim();
@@ -92,4 +97,32 @@ public static class HomeworkForm
         error = null;
         return true;
     }
+
+    public readonly record struct Fields(
+        long LessonId,
+        string Title,
+        string Description,
+        DateTime Deadline,
+        bool IsDone,
+        string Url,
+        string ExtraUrl,
+        string PendingComment,
+        bool CommentsChanged);
+
+    public static bool HasEdits(Fields baseline, Fields current)
+    {
+        var left = Normalize(baseline);
+        var right = Normalize(current);
+        return left != right;
+    }
+
+    private static Fields Normalize(Fields fields) => fields with
+    {
+        Title = fields.Title.Trim(),
+        Description = fields.Description.Trim(),
+        Deadline = fields.Deadline.Date,
+        Url = fields.Url.Trim(),
+        ExtraUrl = fields.ExtraUrl.Trim(),
+        PendingComment = fields.PendingComment.Trim()
+    };
 }

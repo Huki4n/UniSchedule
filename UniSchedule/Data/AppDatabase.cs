@@ -155,6 +155,7 @@ public sealed partial class AppDatabase
             CREATE INDEX IF NOT EXISTS IX_HomeworkComment_Homework ON HomeworkComment(HomeworkId);
             """;
         cmd.ExecuteNonQuery();
+        EnsureHomeworkNotificationLog(db);
         EnsureColumn(db, "Homework", "Url", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(db, "Homework", "ExtraUrl", "TEXT NOT NULL DEFAULT ''");
     }
@@ -163,7 +164,7 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var tx = db.BeginTransaction();
-        foreach (var table in new[] { "HomeworkComment", "Homework", "SubjectRollback", "NotificationLog", "Lessons" })
+        foreach (var table in new[] { "HomeworkComment", "Homework", "SubjectRollback", "NotificationLog", "HomeworkNotificationLog", "Lessons" })
         {
             using var cmd = db.CreateCommand();
             cmd.CommandText = $"DELETE FROM {table}";
@@ -173,7 +174,41 @@ public sealed partial class AppDatabase
         tx.Commit();
     }
 
+    private static void EnsureHomeworkNotificationLog(SqliteConnection db)
+    {
+        if (HasColumn(db, "HomeworkNotificationLog", "OffsetDays"))
+        {
+            using var drop = db.CreateCommand();
+            drop.CommandText = "DROP TABLE HomeworkNotificationLog";
+            drop.ExecuteNonQuery();
+        }
+
+        using var cmd = db.CreateCommand();
+        cmd.CommandText =
+            """
+            CREATE TABLE IF NOT EXISTS HomeworkNotificationLog (
+                HomeworkId INTEGER NOT NULL,
+                FireDate TEXT NOT NULL,
+                OffsetMinutes INTEGER NOT NULL,
+                PRIMARY KEY (HomeworkId, FireDate, OffsetMinutes)
+            );
+            """;
+        cmd.ExecuteNonQuery();
+    }
+
     private static void EnsureColumn(SqliteConnection db, string table, string column, string definition)
+    {
+        if (HasColumn(db, table, column))
+        {
+            return;
+        }
+
+        using var alter = db.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition}";
+        alter.ExecuteNonQuery();
+    }
+
+    private static bool HasColumn(SqliteConnection db, string table, string column)
     {
         using var info = db.CreateCommand();
         info.CommandText = $"PRAGMA table_info({table})";
@@ -182,12 +217,10 @@ public sealed partial class AppDatabase
         {
             if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
             {
-                return;
+                return true;
             }
         }
 
-        using var alter = db.CreateCommand();
-        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition}";
-        alter.ExecuteNonQuery();
+        return false;
     }
 }

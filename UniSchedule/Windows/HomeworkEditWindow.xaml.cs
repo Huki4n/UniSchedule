@@ -9,6 +9,7 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
 {
     private readonly Homework _homework;
     private readonly bool _isNew;
+    private HomeworkForm.Fields _baseline;
 
     public bool Deleted { get; private set; }
 
@@ -17,6 +18,8 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
     public bool OpenSchedule { get; private set; }
 
     public DateTime ScheduleDate { get; private set; }
+
+    public long ScheduleLessonId { get; private set; }
 
     public event EventHandler? Finished;
 
@@ -61,6 +64,7 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
         DoneBox.IsChecked = homework.IsDone;
         UrlBox.Text = homework.Url;
         ExtraUrlBox.Text = homework.ExtraUrl;
+        _baseline = ReadFields(commentsChanged: false);
     }
 
     public Homework Result => _homework;
@@ -133,6 +137,7 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
     private void OpenSchedule_Click(object sender, RoutedEventArgs e)
     {
         ScheduleDate = DeadlineBox.SelectedDate?.Date ?? _homework.Deadline.Date;
+        ScheduleLessonId = SlotBox.SelectedItem is ComboBoxItem { Tag: long id } ? id : _homework.LessonId;
         OpenSchedule = true;
         Finish(accepted: false);
     }
@@ -140,6 +145,26 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
     private void Cancel_Click(object sender, RoutedEventArgs e) => RequestCancel();
 
     public void RequestCancel() => Finish(accepted: false);
+
+    public void Save() => Save_Click(this, new RoutedEventArgs());
+
+    public bool HasEdits(bool commentsChanged) =>
+        HomeworkForm.HasEdits(_baseline, ReadFields(commentsChanged));
+
+    private HomeworkForm.Fields ReadFields(bool commentsChanged)
+    {
+        var lessonId = SlotBox.SelectedItem is ComboBoxItem { Tag: long id } ? id : _homework.LessonId;
+        return new HomeworkForm.Fields(
+            lessonId,
+            TitleBox.Text,
+            DescriptionBox.Text,
+            DeadlineBox.SelectedDate?.Date ?? default,
+            DoneBox.IsChecked == true,
+            UrlBox.Text,
+            ExtraUrlBox.Text,
+            CommentBox.Text,
+            commentsChanged);
+    }
 
     public void SetComments(IReadOnlyList<HomeworkComment> comments)
     {
