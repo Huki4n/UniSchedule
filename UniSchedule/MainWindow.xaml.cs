@@ -232,6 +232,7 @@ public partial class MainWindow : Window
         _db.SaveSettings(_settings);
         _notifications.UpdateSettings(_settings);
         _homeworkLessonFilter = null;
+        CloseEditor();
         ReloadBoard();
     }
 
@@ -330,6 +331,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        var previousGroup = _settings.SelectedGroup;
         _settings = window.Settings;
         _db.SaveSettings(_settings);
         if (_manageAutostart)
@@ -337,6 +339,11 @@ public partial class MainWindow : Window
             AutostartService.Apply(_settings.Autostart);
         }
         _notifications.UpdateSettings(_settings);
+        if (!string.Equals(previousGroup, _settings.SelectedGroup, StringComparison.OrdinalIgnoreCase))
+        {
+            CloseEditor();
+        }
+
         ReloadGroups();
         ReloadBoard();
     }
