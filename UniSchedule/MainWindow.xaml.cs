@@ -440,21 +440,26 @@ public partial class MainWindow : Window
         var hasRelated = existing is not null && LessonSeries.HasOthers(groupLessons, existing);
         var rollback = existing is null ? null : _db.GetSubjectRollback(existing.Id, DateTime.Today);
         var editor = new LessonEditWindow(lesson, isNew, homework, hasRelated, rollback);
-        editor.Finished += (_, _) => HideEditor(() => ApplyLesson(editor, existing, lesson, isNew, groupLessons));
+        editor.Finished += (_, _) =>
+        {
+            if (ApplyLesson(editor, existing, lesson, isNew, groupLessons))
+            {
+                HideEditor();
+            }
+        };
         ShowEditor(editor, isNew ? "Новая пара" : "Редактирование пары");
     }
 
-    private void ApplyLesson(LessonEditWindow editor, Lesson? existing, Lesson lesson, bool isNew, List<Lesson> groupLessons)
+    private bool ApplyLesson(LessonEditWindow editor, Lesson? existing, Lesson lesson, bool isNew, List<Lesson> groupLessons)
     {
         if (editor.OpenHomework is not null)
         {
-            EditHomework(editor.OpenHomework, editor.OpenHomework.LessonId);
-            return;
+            return !EditHomework(editor.OpenHomework, editor.OpenHomework.LessonId);
         }
 
         if (!editor.Accepted)
         {
-            return;
+            return true;
         }
 
         if (editor.Deleted && existing is not null)
@@ -485,6 +490,7 @@ public partial class MainWindow : Window
         }
 
         ReloadBoard();
+        return true;
     }
 
     private void HomeworkOfLesson_Click(object sender, RoutedEventArgs e)
@@ -608,13 +614,13 @@ public partial class MainWindow : Window
         _dayHighlightTimer.Start();
     }
 
-    private void EditHomework(Homework? existing, long? lessonId, DateTime? deadline = null)
+    private bool EditHomework(Homework? existing, long? lessonId, DateTime? deadline = null)
     {
         var lessons = _db.GetLessons(_settings.SelectedGroup);
         if (lessons.Count == 0)
         {
             AppDialog.Info(this, "Нет пар", HomeworkForm.NoLessonsMessage);
-            return;
+            return false;
         }
 
         var isNew = existing is null;
@@ -637,8 +643,13 @@ public partial class MainWindow : Window
             draft.Remove(id);
             editor.SetComments(draft.Visible);
         };
-        editor.Finished += (_, _) => HideEditor(() => ApplyHomework(editor, existing, homework, draft));
+        editor.Finished += (_, _) =>
+        {
+            ApplyHomework(editor, existing, homework, draft);
+            HideEditor();
+        };
         ShowEditor(editor, isNew ? "Новая домашка" : "Редактирование домашки");
+        return true;
     }
 
     private void ApplyHomework(HomeworkEditWindow editor, Homework? existing, Homework homework, HomeworkCommentDraft draft)
@@ -686,7 +697,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void HideEditor(Action? then)
+    private void HideEditor()
     {
         var epoch = _editorEpoch;
         var animation = new DoubleAnimation(0, 560, TimeSpan.FromMilliseconds(160));
@@ -699,7 +710,6 @@ public partial class MainWindow : Window
 
             EditorPanel.Visibility = Visibility.Collapsed;
             EditorHost.Content = null;
-            then?.Invoke();
         };
         EditorShift.BeginAnimation(TranslateTransform.XProperty, animation);
     }
