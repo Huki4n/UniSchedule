@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private DispatcherTimer? _dayHighlightTimer;
     private HomeworkCommentDraft? _commentDraft;
     private bool _savePrompt;
+    private bool _editorClosing;
     private int _editorEpoch;
 
     public MainWindow(AppDatabase db, AppSettings settings, NotificationService notifications, bool manageAutostart)
@@ -718,6 +719,7 @@ public partial class MainWindow : Window
     {
         _editorEpoch++;
         EditorTitle.Text = title;
+        _editorClosing = false;
         var opening = EditorPanel.Visibility != Visibility.Visible;
         EditorHost.Content = editor;
         EditorPanel.Visibility = Visibility.Visible;
@@ -736,6 +738,7 @@ public partial class MainWindow : Window
 
     private void HideEditor()
     {
+        _editorClosing = true;
         var epoch = _editorEpoch;
         var animation = new DoubleAnimation(0, 560, TimeSpan.FromMilliseconds(160));
         animation.Completed += (_, _) =>
@@ -747,6 +750,7 @@ public partial class MainWindow : Window
 
             EditorPanel.Visibility = Visibility.Collapsed;
             EditorHost.Content = null;
+            _editorClosing = false;
         };
         EditorShift.BeginAnimation(TranslateTransform.XProperty, animation);
     }
@@ -759,6 +763,7 @@ public partial class MainWindow : Window
         }
 
         _editorEpoch++;
+        _editorClosing = false;
         EditorShift.BeginAnimation(TranslateTransform.XProperty, null);
         EditorShift.X = 560;
         EditorPanel.Visibility = Visibility.Collapsed;
@@ -794,7 +799,9 @@ public partial class MainWindow : Window
 
     private void Window_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (EditorPanel.Visibility != Visibility.Visible || e.OriginalSource is not DependencyObject source)
+        if (EditorPanel.Visibility != Visibility.Visible ||
+            _editorClosing ||
+            e.OriginalSource is not DependencyObject source)
         {
             return;
         }
@@ -839,7 +846,7 @@ public partial class MainWindow : Window
 
     private void PromptSaveEditor()
     {
-        if (EditorPanel.Visibility != Visibility.Visible || !EditorHasEdits())
+        if (EditorPanel.Visibility != Visibility.Visible || _editorClosing || !EditorHasEdits())
         {
             return;
         }
