@@ -91,11 +91,69 @@ public class ScheduleComposerTests
             .Lessons.Single();
 
         Assert.Equal("#FB923C", card.Accent);
-        Assert.Equal("онлайн", card.Badge);
+        Assert.Equal("Онлайн", card.Place);
+        Assert.Equal("", card.Badge);
+
+        lesson.Room = "1301";
+        var withRoom = ScheduleComposer.Build([lesson], "", FridayMorning, SemesterStart)
+            .Days.Single(day => day.Day == DayOfWeek.Friday)
+            .Lessons.Single();
+        Assert.Equal("1301", withRoom.Place);
+        Assert.Equal("онлайн", withRoom.Badge);
         Assert.True(card.IsOnline);
         Assert.True(card.IsDimmed);
         Assert.Contains("чётная", card.Meta, StringComparison.Ordinal);
         Assert.Contains("3–3 нед.", card.Meta, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_ViewWeek_DoesNotMoveNextLesson_AndUsesColumnDate()
+    {
+        var now = new DateTime(2026, 9, 4, 9, 0, 0);
+        var view = new DateTime(2026, 9, 11);
+        var even = LessonAt(DayOfWeek.Friday, 12, 0, "Чётная");
+        even.Parity = WeekParity.Even;
+        var snapshot = ScheduleComposer.Build(
+            [LessonAt(DayOfWeek.Friday, 10, 10, "Сети"), even],
+            "",
+            now,
+            SemesterStart,
+            view);
+
+        Assert.Contains("Сети", snapshot.NextLessonText, StringComparison.Ordinal);
+        Assert.Contains("сегодня", snapshot.NextLessonText, StringComparison.Ordinal);
+        Assert.Equal("Неделя 2 · чётная", snapshot.WeekLabel);
+        var friday = snapshot.Days.Single(day => day.Day == DayOfWeek.Friday);
+        Assert.False(friday.IsToday);
+        Assert.Equal(view, friday.Date);
+        Assert.Contains("11 сент.", friday.Title, StringComparison.Ordinal);
+        Assert.False(friday.Lessons.Single(card => card.Subject == "Чётная").IsDimmed);
+        Assert.Equal(new DateTime(2026, 9, 7), snapshot.Days.Single(day => day.Day == DayOfWeek.Monday).Date);
+    }
+
+    [Fact]
+    public void Build_ShowsHomeworkOnlyOnItsDeadline()
+    {
+        var lesson = LessonAt(DayOfWeek.Friday, 10, 10, "Сети");
+        lesson.Id = 7;
+        var due = new Homework { LessonId = 7, Title = "ЛР", Deadline = new DateTime(2026, 9, 4) };
+        var later = new Homework { LessonId = 7, Title = "Позже", Deadline = new DateTime(2026, 9, 11) };
+        var other = new Homework { LessonId = 8, Title = "Чужая", Deadline = new DateTime(2026, 9, 4) };
+
+        var today = ScheduleComposer.Build([lesson], "", FridayMorning, SemesterStart, homework: [due, later, other]);
+        var card = today.Days.Single(day => day.Day == DayOfWeek.Friday).Lessons.Single();
+        Assert.Equal(["ДЗ · ЛР"], card.HomeworkLinks.Select(link => link.Label).ToArray());
+
+        var nextWeek = ScheduleComposer.Build(
+            [lesson],
+            "",
+            FridayMorning,
+            SemesterStart,
+            new DateTime(2026, 9, 11),
+            [due, later]);
+        Assert.Equal(
+            ["ДЗ · Позже"],
+            nextWeek.Days.Single(day => day.Day == DayOfWeek.Friday).Lessons.Single().HomeworkLinks.Select(link => link.Label).ToArray());
     }
 
     private static Lesson LessonAt(DayOfWeek day, int hour, int minute, string subject, string teacher = "") =>

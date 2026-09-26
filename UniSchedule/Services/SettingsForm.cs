@@ -4,15 +4,13 @@ namespace UniSchedule.Services;
 
 public static class SettingsForm
 {
-    public const string ReminderError = "Минуты напоминаний должны быть целыми числами.";
+    public const string ReminderError = "Минуты напоминания должны быть целым числом больше нуля.";
 
-    public static bool TryParseReminders(string? firstText, string? secondText, out int first, out int second)
+    public static bool TryParseReminder(string? text, out int minutes)
     {
-        if (!int.TryParse(firstText, out first) || first < 0 ||
-            !int.TryParse(secondText, out second) || second < 0)
+        if (!int.TryParse(text, out minutes) || minutes < 1)
         {
-            first = 0;
-            second = 0;
+            minutes = 0;
             return false;
         }
 

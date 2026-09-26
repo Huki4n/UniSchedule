@@ -87,7 +87,9 @@
             <Setter Property="Foreground" Value="{StaticResource AppText}"/>
             <Setter Property="BorderBrush" Value="{StaticResource AppBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -98,7 +100,8 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -125,7 +128,8 @@
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -138,7 +142,7 @@
         </Style>
 
         <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Padding" Value="0"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="MinHeight" Value="36"/>
             <Setter Property="BorderBrush" Value="{StaticResource AppBorder}"/>
@@ -160,8 +164,9 @@
                                 ClipToBounds="True"
                                 SnapsToDevicePixels="True">
                             <ScrollViewer x:Name="PART_ContentHost"
-                                          Margin="0"
+                                          Margin="12,0,12,0"
                                           Padding="0"
+                                          VerticalAlignment="Center"
                                           VerticalScrollBarVisibility="Disabled"
                                           HorizontalScrollBarVisibility="Disabled"
                                           CanContentScroll="False"
@@ -176,7 +181,7 @@
                     <Setter Property="Height" Value="Auto"/>
                     <Setter Property="MinHeight" Value="72"/>
                     <Setter Property="VerticalContentAlignment" Value="Top"/>
-                    <Setter Property="Padding" Value="8,8"/>
+                    <Setter Property="Padding" Value="0"/>
                     <Setter Property="TextWrapping" Value="Wrap"/>
                     <Setter Property="Template">
                         <Setter.Value>
@@ -188,7 +193,8 @@
                                         ClipToBounds="True"
                                         SnapsToDevicePixels="True">
                                     <ScrollViewer x:Name="PART_ContentHost"
-                                                  Margin="0" Padding="0"
+                                                  Margin="12,8,12,8" Padding="0"
+                                                  VerticalAlignment="Stretch"
                                                   VerticalScrollBarVisibility="Auto"
                                                   HorizontalScrollBarVisibility="Disabled"
                                                   PanningMode="VerticalOnly"
@@ -239,7 +245,8 @@
             <Setter Property="Background" Value="{StaticResource AppCard}"/>
             <Setter Property="BorderBrush" Value="{StaticResource AppBorder}"/>
             <Setter Property="FontSize" Value="16"/>
-            <Setter Property="Padding" Value="8,0,28,0"/>
+            <Setter Property="Padding" Value="12,0,32,0"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="MinHeight" Value="36"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
@@ -263,7 +270,7 @@
                                               ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                               ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"/>
                             <TextBox x:Name="PART_EditableTextBox"
-                                     Margin="8,0,28,0"
+                                     Margin="0,0,20,0"
                                      Padding="0"
                                      Height="Auto"
                                      MinHeight="0"

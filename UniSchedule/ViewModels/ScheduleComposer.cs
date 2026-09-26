@@ -31,7 +31,9 @@ public static class ScheduleComposer
         IReadOnlyList<Lesson> lessons,
         string? search,
         DateTime now,
-        DateTime semesterStart)
+        DateTime semesterStart,
+        DateTime? viewDate = null,
+        IReadOnlyList<Homework>? homework = null)
     {
         var query = (search ?? "").Trim();
         IReadOnlyList<Lesson> visible = query.Length == 0
@@ -42,19 +44,23 @@ public static class ScheduleComposer
                     lesson.Teacher.Contains(query, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
+        var view = (viewDate ?? now).Date;
+        var weekStart = AcademicCalendar.StartOfWeek(view);
         var columns = new List<DayColumnVm>(Days.Length);
-        foreach (var day in Days)
+        for (var i = 0; i < Days.Length; i++)
         {
+            var date = weekStart.AddDays(i);
             var column = new DayColumnVm
             {
-                Day = day,
-                Title = AcademicCalendar.DayName(day),
-                IsToday = now.Date.DayOfWeek == day
+                Day = Days[i],
+                Date = date,
+                Title = AcademicCalendar.ColumnTitle(date),
+                IsToday = date == now.Date
             };
 
-            foreach (var lesson in visible.Where(item => item.DayOfWeek == day).OrderBy(item => item.Start))
+            foreach (var lesson in visible.Where(item => item.DayOfWeek == date.DayOfWeek).OrderBy(item => item.Start))
             {
-                column.Lessons.Add(ToCard(lesson, now.Date, semesterStart));
+                column.Lessons.Add(ToCard(lesson, date, semesterStart, homework));
             }
 
             columns.Add(column);
@@ -62,7 +68,7 @@ public static class ScheduleComposer
 
         return new ScheduleSnapshot
         {
-            WeekLabel = AcademicCalendar.WeekLabel(now.Date, semesterStart),
+            WeekLabel = AcademicCalendar.WeekLabel(view, semesterStart),
             NextLessonText = visible.Count == 0
                 ? EmptyScheduleText
                 : BuildNextLessonText(visible, now, semesterStart),
@@ -70,7 +76,11 @@ public static class ScheduleComposer
         };
     }
 
-    private static LessonCardVm ToCard(Lesson lesson, DateTime today, DateTime semesterStart)
+    private static LessonCardVm ToCard(
+        Lesson lesson,
+        DateTime columnDate,
+        DateTime semesterStart,
+        IReadOnlyList<Homework>? homework)
     {
         var metaParts = new List<string>();
         var type = AcademicCalendar.TypeLabel(lesson.LessonType);
@@ -94,13 +104,6 @@ public static class ScheduleComposer
             metaParts.Add($"{lesson.WeekFrom ?? 1}–{lesson.WeekTo ?? lesson.WeekFrom} нед.");
         }
 
-        var accent = lesson.LessonType switch
-        {
-            LessonCodes.Practice => "#34D399",
-            LessonCodes.Lab => "#FB923C",
-            _ => MeetingLinks.IsCallUrl(lesson.MeetingUrl) ? "#A78BFA" : "#60A5FA"
-        };
-
         return new LessonCardVm
         {
             Lesson = lesson,
@@ -108,11 +111,52 @@ public static class ScheduleComposer
             Subject = lesson.Subject,
             Place = lesson.PlaceText,
             Meta = string.Join(" · ", metaParts),
-            Badge = MeetingLinks.IsCallUrl(lesson.MeetingUrl) ? "онлайн" : "",
+            Badge = MeetingLinks.IsCallUrl(lesson.MeetingUrl) && lesson.PlaceText != "Онлайн" ? "онлайн" : "",
+            Links = CardLinks(lesson),
             IsOnline = lesson.HasLink,
-            IsDimmed = !AcademicCalendar.AppliesThisWeek(lesson, today, semesterStart),
-            Accent = accent
+            IsDimmed = !AcademicCalendar.AppliesThisWeek(lesson, columnDate, semesterStart),
+            Accent = LessonAccent.For(lesson),
+            HomeworkLinks = DueLinks(homework, lesson, columnDate)
         };
+    }
+
+    private static IReadOnlyList<string> CardLinks(Lesson lesson)
+    {
+        var links = new List<string>();
+        Add(lesson.MeetingUrl);
+        Add(lesson.LmsUrl);
+        return links;
+
+        void Add(string? url)
+        {
+            var line = (url ?? "").Trim();
+            if (line.Length > 0 && !links.Contains(line, StringComparer.OrdinalIgnoreCase))
+            {
+                links.Add(line);
+            }
+        }
+    }
+
+    private static IReadOnlyList<HomeworkLinkVm> DueLinks(
+        IReadOnlyList<Homework>? homework,
+        Lesson lesson,
+        DateTime columnDate)
+    {
+        if (homework is null || lesson.Id <= 0)
+        {
+            return [];
+        }
+
+        return homework
+            .Where(item => item.LessonId == lesson.Id && item.Deadline.Date == columnDate.Date)
+            .OrderBy(item => item.IsDone)
+            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new HomeworkLinkVm
+            {
+                Homework = item,
+                Label = $"ДЗ · {item.Title.Trim()}"
+            })
+            .ToList();
     }
 
     private static string BuildNextLessonText(IReadOnlyList<Lesson> lessons, DateTime now, DateTime semesterStart)

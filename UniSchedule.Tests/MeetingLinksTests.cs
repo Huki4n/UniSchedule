@@ -15,6 +15,24 @@ public class MeetingLinksTests
         Assert.Equal(lms, MeetingLinks.IsLmsUrl(url));
     }
 
+    [Theory]
+    [InlineData("https://edu.kpfu.ru/course/1", true)]
+    [InlineData(" http://example.com/a ", true)]
+    [InlineData("HTTP://example.com", true)]
+    [InlineData("file:///C:/Windows/notepad.exe", false)]
+    [InlineData(@"C:\Windows\notepad.exe", false)]
+    [InlineData("ms-msdt:id", false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    public void WebUri_AllowsOnlyAbsoluteHttpAndHttps(string url, bool allowed)
+    {
+        Assert.Equal(allowed, MeetingLinks.TryGetWebUri(url, out var uri));
+        if (allowed)
+        {
+            Assert.True(uri.Scheme is "http" or "https");
+        }
+    }
+
     [Fact]
     public void ApplyOnlineNote_PutsOnlineFirstWithoutDuplicates()
     {

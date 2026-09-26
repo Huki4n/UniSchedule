@@ -37,8 +37,7 @@ public class NotificationPlannerTests
         Assert.Empty(NotificationPlanner.Collect([lesson], settings, now, (_, _, _) => false));
 
         settings.NotificationsEnabled = true;
-        settings.FirstReminderMinutes = 0;
-        settings.SecondReminderMinutes = 0;
+        settings.ReminderMinutes = [];
         Assert.Empty(settings.ReminderOffsets);
         Assert.Empty(NotificationPlanner.Collect([lesson], settings, now, (_, _, _) => false));
     }
@@ -60,10 +59,10 @@ public class NotificationPlannerTests
     [Fact]
     public void ReminderOffsets_DeduplicatesAndSortsDescending()
     {
-        var settings = new AppSettings { FirstReminderMinutes = 15, SecondReminderMinutes = 60 };
+        var settings = new AppSettings { ReminderMinutes = [15, 60, 15] };
         Assert.Equal([60, 15], settings.ReminderOffsets);
 
-        settings.SecondReminderMinutes = 15;
+        settings.ReminderMinutes = [15, 15];
         Assert.Equal([15], settings.ReminderOffsets);
     }
 
@@ -71,8 +70,7 @@ public class NotificationPlannerTests
     {
         SelectedGroup = "11-321",
         SemesterStart = SemesterStart,
-        FirstReminderMinutes = first,
-        SecondReminderMinutes = 0,
+        ReminderMinutes = [first],
         NotificationsEnabled = true
     };
 

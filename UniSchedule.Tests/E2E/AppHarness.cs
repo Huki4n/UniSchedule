@@ -85,10 +85,10 @@ public sealed class AppHarness : IDisposable
         BeginUi(() => ((MainWindow)FindWindow("Main")!).OpenLesson(subject));
 
     public void WaitFor(string automationId, TimeSpan? timeout = null) =>
-        Wait(() => OnUi(() => FindWindow(automationId) is not null), "Нет окна " + automationId, timeout);
+        Wait(() => OnUi(() => IsShown(automationId)), "Нет окна " + automationId, timeout);
 
     public void WaitGone(string automationId) =>
-        Wait(() => OnUi(() => FindWindow(automationId) is null), "Окно не закрылось: " + automationId, TimeSpan.FromSeconds(10));
+        Wait(() => OnUi(() => !IsShown(automationId)), "Окно не закрылось: " + automationId, TimeSpan.FromSeconds(10));
 
     public void CloseMain() => OnUi(() => FindWindow("Main")!.Close());
 
@@ -179,6 +179,32 @@ public sealed class AppHarness : IDisposable
         }
 
         return _app ?? throw new InvalidOperationException("Приложение ещё не создано.");
+    }
+
+    private static bool IsShown(string automationId)
+    {
+        if (FindWindow(automationId) is not null)
+        {
+            return true;
+        }
+
+        if (Application.Current is null)
+        {
+            return false;
+        }
+
+        foreach (Window window in Application.Current.Windows)
+        {
+            var found = Find<FrameworkElement>(
+                window,
+                element => AutomationProperties.GetAutomationId(element) == automationId && element.IsVisible);
+            if (found is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Window? FindWindow(string automationId)

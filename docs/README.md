@@ -7,9 +7,10 @@
 | Файл | Область |
 | --- | --- |
 | [startup.md](startup.md) | Запуск, аргументы, один экземпляр, композиция |
-| [interaction.md](interaction.md) | Окна, поиск, карточки, трей, формы |
-| [loading.md](loading.md) | Чтение доски и импорт Excel |
+| [interaction.md](interaction.md) | Окна, поиск, карточки пар, трей, формы пары и настроек |
 | [schedule.md](schedule.md) | Недели, карточки, строка «Ближайшая» |
+| [homework.md](homework.md) | Домашки: месяц, форма, комментарии, таблицы |
+| [loading.md](loading.md) | Чтение доски и импорт Excel |
 | [notifications.md](notifications.md) | Напоминания и тосты |
 | [storage.md](storage.md) | SQLite, ключи, перенос старой базы |
 

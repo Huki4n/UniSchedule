@@ -9,6 +9,20 @@ public static class MeetingLinks
         @"telemost|mts-link|mtslink|meet\.google|ktalk|teleboss|zoom\.|t\.me/|clck\.ru",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    public static bool TryGetWebUri(string? url, out Uri uri)
+    {
+        if (!string.IsNullOrWhiteSpace(url) &&
+            Uri.TryCreate(url.Trim(), UriKind.Absolute, out var parsed) &&
+            (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps))
+        {
+            uri = parsed;
+            return true;
+        }
+
+        uri = null!;
+        return false;
+    }
+
     public static bool IsCallUrl(string? url) =>
         !string.IsNullOrWhiteSpace(url) && CallHostRegex.IsMatch(url);
 

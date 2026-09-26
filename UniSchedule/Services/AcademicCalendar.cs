@@ -37,6 +37,18 @@ public static class AcademicCalendar
     public static bool AppliesOnDate(Lesson lesson, DateTime date, DateTime semesterStart) =>
         lesson.DayOfWeek == date.DayOfWeek && AppliesThisWeek(lesson, date, semesterStart);
 
+    public static DateTime StartOfWeek(DateTime date)
+    {
+        var diff = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return date.Date.AddDays(-diff);
+    }
+
+    public static string ColumnTitle(DateTime date) =>
+        $"{DayName(date.DayOfWeek)}, {date.Day} {MonthShort(date.Month)}";
+
+    public static string MonthTitle(DateTime date) =>
+        $"{MonthName(date.Month)} {date.Year}";
+
     public static string WeekLabel(DateTime date, DateTime semesterStart)
     {
         var week = GetWeekNumber(date, semesterStart);
@@ -71,6 +83,8 @@ public static class AcademicCalendar
         LessonCodes.Lecture => "Лекция",
         LessonCodes.Practice => "Практика",
         LessonCodes.Lab => "Лабораторная",
+        LessonCodes.Credit => "Зачет",
+        LessonCodes.Exam => "Экзамен",
         _ => ""
     };
 
@@ -79,5 +93,37 @@ public static class AcademicCalendar
         WeekParity.Odd => "нечётная",
         WeekParity.Even => "чётная",
         _ => "все недели"
+    };
+
+    private static string MonthShort(int month) => month switch
+    {
+        1 => "янв.",
+        2 => "февр.",
+        3 => "мар.",
+        4 => "апр.",
+        5 => "мая",
+        6 => "июн.",
+        7 => "июл.",
+        8 => "авг.",
+        9 => "сент.",
+        10 => "окт.",
+        11 => "нояб.",
+        _ => "дек."
+    };
+
+    private static string MonthName(int month) => month switch
+    {
+        1 => "Январь",
+        2 => "Февраль",
+        3 => "Март",
+        4 => "Апрель",
+        5 => "Май",
+        6 => "Июнь",
+        7 => "Июль",
+        8 => "Август",
+        9 => "Сентябрь",
+        10 => "Октябрь",
+        11 => "Ноябрь",
+        _ => "Декабрь"
     };
 }

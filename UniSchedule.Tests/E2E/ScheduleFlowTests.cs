@@ -25,15 +25,14 @@ public sealed class ScheduleFlowTests
 
             session.Press("Settings");
             session.WaitFor("SettingsWindow");
-            session.SetText("FirstReminder", "0");
-            session.SetText("SecondReminder", "0");
+            session.Press("ReminderRemove");
+            session.Press("ReminderRemove");
             session.Uncheck("MinimizeToTray");
             session.Press("SaveSettings");
             session.WaitGone("SettingsWindow");
 
             var saved = Read(databasePath);
-            Assert.Equal(0, saved.FirstReminderMinutes);
-            Assert.Equal(0, saved.SecondReminderMinutes);
+            Assert.Empty(saved.ReminderMinutes);
             Assert.False(saved.MinimizeToTray);
 
             session.Press("AddLesson");

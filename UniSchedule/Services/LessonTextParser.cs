@@ -102,7 +102,15 @@ public static class LessonTextParser
             lesson.WeekTo = week;
         }
 
-        if (Regex.IsMatch(text, @"\bлаб", RegexOptions.IgnoreCase))
+        if (Regex.IsMatch(text, @"\bэкзамен", RegexOptions.IgnoreCase))
+        {
+            lesson.LessonType = LessonCodes.Exam;
+        }
+        else if (Regex.IsMatch(text, @"\bзач[её]т", RegexOptions.IgnoreCase))
+        {
+            lesson.LessonType = LessonCodes.Credit;
+        }
+        else if (Regex.IsMatch(text, @"\bлаб", RegexOptions.IgnoreCase))
         {
             lesson.LessonType = LessonCodes.Lab;
         }
@@ -248,7 +256,7 @@ public static class LessonTextParser
     private static string TrimSubject(string value)
     {
         var subject = value.Trim(' ', ',', '.', '/', '-', ':', ';');
-        subject = Regex.Replace(subject, @"\b(лекции|лекция|лек\.|практ\.|прак\.|лаб\.)\b", "", RegexOptions.IgnoreCase);
+        subject = Regex.Replace(subject, @"\b(лекции|лекция|лек\.|практ\.|прак\.|лаб\.|зач[её]т|экзамен)\b", "", RegexOptions.IgnoreCase);
         subject = Regex.Replace(subject, @"\s+", " ").Trim(' ', ',', '.');
         return string.IsNullOrWhiteSpace(subject) ? value.Trim() : subject;
     }
