@@ -403,6 +403,37 @@ public sealed class AppDatabaseTests : IDisposable
         Assert.Equal(new DateTime(2026, 9, 1), settings.SemesterStart);
     }
 
+    [Fact]
+    public void UpsertLessons_WritesTheWholeListTogether()
+    {
+        var first = new Lesson
+        {
+            GroupCode = "11-321",
+            Subject = "Сети",
+            DayOfWeek = DayOfWeek.Monday,
+            Start = new TimeSpan(8, 30, 0),
+            End = new TimeSpan(10, 0, 0)
+        };
+        var second = new Lesson
+        {
+            GroupCode = "11-321",
+            Subject = "Базы",
+            DayOfWeek = DayOfWeek.Tuesday,
+            Start = new TimeSpan(10, 10, 0),
+            End = new TimeSpan(11, 40, 0)
+        };
+
+        _database.UpsertLessons([first, second]);
+        first.Subject = "Сети 2";
+        second.Subject = "Базы 2";
+        _database.UpsertLessons([first, second]);
+
+        var loaded = _database.GetLessons("11-321");
+        Assert.Equal(["Сети 2", "Базы 2"], loaded.Select(lesson => lesson.Subject));
+        Assert.Equal(first.Id, loaded[0].Id);
+        Assert.Equal(second.Id, loaded[1].Id);
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();

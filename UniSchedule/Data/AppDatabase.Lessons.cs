@@ -53,6 +53,24 @@ public sealed partial class AppDatabase
     public long UpsertLesson(Lesson lesson)
     {
         using var db = Open();
+        WriteLesson(db, lesson);
+        return lesson.Id;
+    }
+
+    public void UpsertLessons(IReadOnlyList<Lesson> lessons)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        foreach (var lesson in lessons)
+        {
+            WriteLesson(db, lesson);
+        }
+
+        tx.Commit();
+    }
+
+    private static void WriteLesson(SqliteConnection db, Lesson lesson)
+    {
         using var cmd = db.CreateCommand();
         if (lesson.Id > 0)
         {
@@ -86,8 +104,6 @@ public sealed partial class AppDatabase
         {
             lesson.Id = Convert.ToInt64(result);
         }
-
-        return lesson.Id;
     }
 
     public void DeleteLesson(long id)

@@ -29,7 +29,7 @@
 
 `LessonType` и `Source` — коды из `LessonCodes`: `lecture`, `practice`, `lab`, `credit`, `exam`, `manual`, `imported`. Значения в базе не переименовывать.
 
-`UpsertLesson`: `Id > 0` обновляет строку, иначе вставляет и записывает новый id в объект. `DeleteLesson` удаляет пару, строку `SubjectRollback` и домашки этой пары с комментариями. `NotificationLog` не чистится. `GetAllLessons` сортирует по группе, дню и началу.
+`UpsertLesson`: `Id > 0` обновляет строку, иначе вставляет и записывает новый id в объект. `UpsertLessons` делает то же для списка пар одной транзакцией: сбой на середине не оставляет часть серии записанной. `DeleteLesson` удаляет пару, строку `SubjectRollback` и домашки этой пары с комментариями. `NotificationLog` не чистится. `GetAllLessons` сортирует по группе, дню и началу.
 
 Импорт описан в [loading.md](loading.md): удаляются только строки `Source='imported'`. Домашки этих пар перепривязываются или удаляются, как описано в [homework.md](homework.md). После замены удаляются строки `SubjectRollback`, чей `LessonId` больше не существует.
 
@@ -43,7 +43,7 @@
 | `OriginalSubject` | Первое название в этот календарный день |
 | `ChangedOn` | `yyyy-MM-dd` |
 
-`RememberSubjectRollback` делает `INSERT … ON CONFLICT DO NOTHING`: вторая смена названия в тот же день не затирает первое. `GetSubjectRollback` и `RememberSubjectRollback` перед чтением удаляют строки с другой датой. `ForgetSubjectRollback` удаляет запись, когда сохранённое название совпало с записанным первоначальным.
+`RememberSubjectRollback` делает `INSERT … ON CONFLICT DO NOTHING`: вторая смена названия в тот же день не затирает первое. `GetSubjectRollback` и `RememberSubjectRollback` перед чтением удаляют строки с другой датой. `ForgetSubjectRollback` удаляет запись, когда сохранённое название совпало с записанным первоначальным. Какой из трёх вызовов нужен, решает `SubjectRollbackPolicy`, не окно.
 
 ## Settings
 

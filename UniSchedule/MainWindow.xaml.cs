@@ -383,6 +383,7 @@ public partial class MainWindow : Window
         }
 
         _db.DeleteLesson(lesson.Id);
+        CloseEditorIfStale(lesson.Id, homeworkId: null);
         ReloadBoard();
     }
 
@@ -406,8 +407,16 @@ public partial class MainWindow : Window
         }
     }
 
-    private static void OpenAddress(string url) =>
-        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    private void OpenAddress(string url)
+    {
+        if (!MeetingLinks.TryGetWebUri(url, out var uri))
+        {
+            AppDialog.Info(this, "Ссылка", "Открываются только адреса http и https.");
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+    }
 
     private void EditLesson(Lesson? existing, DayOfWeek day)
     {
@@ -455,17 +464,18 @@ public partial class MainWindow : Window
                 lesson.Source = LessonCodes.Manual;
             }
 
-            _db.UpsertLesson(lesson);
             var affected = existing is null
                 ? []
                 : LessonSeries.Select(groupLessons, existing, editor.Scope);
             var previousSubjects = affected.ToDictionary(item => item.Id, item => item.Subject);
+            var batch = new List<Lesson> { lesson };
             foreach (var other in affected)
             {
                 LessonSeries.CopyShared(lesson, other);
-                _db.UpsertLesson(other);
+                batch.Add(other);
             }
 
+            _db.UpsertLessons(batch);
             RememberSubjectNames(existing, lesson, previousSubjects);
         }
 
@@ -544,6 +554,7 @@ public partial class MainWindow : Window
         }
 
         _db.DeleteHomework(card.Homework.Id);
+        CloseEditorIfStale(lessonId: null, card.Homework.Id);
         ReloadBoard();
     }
 
@@ -609,22 +620,23 @@ public partial class MainWindow : Window
         };
 
         var comments = homework.Id > 0 ? _db.GetHomeworkComments(homework.Id) : [];
+        var draft = new HomeworkCommentDraft(comments);
         var editor = new HomeworkEditWindow(homework, isNew, lessons, comments);
         editor.CommentAdded += (_, text) =>
         {
-            _db.AddHomeworkComment(homework.Id, text, DateTime.Now);
-            editor.SetComments(_db.GetHomeworkComments(homework.Id));
+            draft.Add(text, DateTime.Now);
+            editor.SetComments(draft.Visible);
         };
         editor.CommentRemoved += (_, id) =>
         {
-            _db.DeleteHomeworkComment(id);
-            editor.SetComments(_db.GetHomeworkComments(homework.Id));
+            draft.Remove(id);
+            editor.SetComments(draft.Visible);
         };
-        editor.Finished += (_, _) => HideEditor(() => ApplyHomework(editor, existing, homework));
+        editor.Finished += (_, _) => HideEditor(() => ApplyHomework(editor, existing, homework, draft));
         ShowEditor(editor, isNew ? "Новая домашка" : "Редактирование домашки");
     }
 
-    private void ApplyHomework(HomeworkEditWindow editor, Homework? existing, Homework homework)
+    private void ApplyHomework(HomeworkEditWindow editor, Homework? existing, Homework homework, HomeworkCommentDraft draft)
     {
         if (editor.OpenSchedule)
         {
@@ -644,6 +656,15 @@ public partial class MainWindow : Window
         else
         {
             _db.UpsertHomework(homework);
+            foreach (var id in draft.RemovedIds)
+            {
+                _db.DeleteHomeworkComment(id);
+            }
+
+            foreach (var comment in draft.Added)
+            {
+                _db.AddHomeworkComment(homework.Id, comment.Body, comment.CreatedAt);
+            }
         }
 
         ReloadBoard();
@@ -701,6 +722,33 @@ public partial class MainWindow : Window
         EditorHost.Content = null;
     }
 
+    private void CloseEditorIfStale(long? lessonId, long? homeworkId)
+    {
+        if (EditorHost.Content is LessonEditWindow lesson &&
+            lessonId is long openLesson &&
+            lesson.Result.Id == openLesson)
+        {
+            CloseEditor();
+            return;
+        }
+
+        if (EditorHost.Content is not HomeworkEditWindow homework)
+        {
+            return;
+        }
+
+        if (homeworkId is long openHomework && homework.Result.Id == openHomework)
+        {
+            CloseEditor();
+            return;
+        }
+
+        if (lessonId is long owner && homework.Result.LessonId == owner)
+        {
+            CloseEditor();
+        }
+    }
+
     private void CloseEditor_Click(object sender, RoutedEventArgs e)
     {
         switch (EditorHost.Content)
@@ -732,17 +780,15 @@ public partial class MainWindow : Window
     private void RememberSubjectName(long lessonId, string previous, string next, DateTime today)
     {
         var stored = _db.GetSubjectRollback(lessonId, today);
-        if (string.Equals(next.Trim(), (stored ?? previous).Trim(), StringComparison.OrdinalIgnoreCase))
+        switch (SubjectRollbackPolicy.Decide(previous, stored, next))
         {
-            if (stored is not null)
-            {
+            case SubjectRollbackDecision.Forget:
                 _db.ForgetSubjectRollback(lessonId);
-            }
-
-            return;
+                break;
+            case SubjectRollbackDecision.Remember:
+                _db.RememberSubjectRollback(lessonId, SubjectRollbackPolicy.OriginalName(previous, stored), today);
+                break;
         }
-
-        _db.RememberSubjectRollback(lessonId, stored ?? previous, today);
     }
 
     private static Lesson? GetLesson(object sender)

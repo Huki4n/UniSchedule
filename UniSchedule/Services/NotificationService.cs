@@ -151,7 +151,7 @@ public sealed class NotificationService : IDisposable
                 builder.AddText(lesson.Teacher);
             }
 
-            if (lesson.HasLink && Uri.TryCreate(lesson.PrimaryUrl, UriKind.Absolute, out var uri))
+            if (MeetingLinks.TryGetWebUri(lesson.PrimaryUrl, out var uri))
             {
                 builder.AddButton(new ToastButton()
                     .SetContent("Открыть ссылку")
