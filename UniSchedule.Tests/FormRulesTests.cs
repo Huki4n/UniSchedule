@@ -53,6 +53,20 @@ public class FormRulesTests
     }
 
     [Fact]
+    public void HomeworkForm_LessonExists_ChecksCurrentLessonList()
+    {
+        var lessons = new List<Lesson>
+        {
+            new() { Id = 1, Subject = "Сети" },
+            new() { Id = 3, Subject = "Базы" }
+        };
+
+        Assert.True(HomeworkForm.LessonExists(lessons, 3));
+        Assert.False(HomeworkForm.LessonExists(lessons, 2));
+        Assert.Equal("Выбранная пара удалена. Выберите другую.", HomeworkForm.MissingLessonMessage);
+    }
+
+    [Fact]
     public void HomeworkForm_GroupsSameSubjectAndKeepsWeekOrder()
     {
         var groups = HomeworkForm.GroupBySubject(

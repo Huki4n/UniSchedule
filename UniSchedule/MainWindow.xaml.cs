@@ -442,7 +442,7 @@ public partial class MainWindow : Window
         var editor = new LessonEditWindow(lesson, isNew, homework, hasRelated, rollback);
         editor.Finished += (_, _) =>
         {
-            if (ApplyLesson(editor, existing, lesson, isNew, groupLessons))
+            if (ApplyLesson(editor, existing, lesson, isNew))
             {
                 HideEditor();
             }
@@ -450,7 +450,7 @@ public partial class MainWindow : Window
         ShowEditor(editor, isNew ? "Новая пара" : "Редактирование пары");
     }
 
-    private bool ApplyLesson(LessonEditWindow editor, Lesson? existing, Lesson lesson, bool isNew, List<Lesson> groupLessons)
+    private bool ApplyLesson(LessonEditWindow editor, Lesson? existing, Lesson lesson, bool isNew)
     {
         if (editor.OpenHomework is not null)
         {
@@ -474,6 +474,7 @@ public partial class MainWindow : Window
                 lesson.Source = LessonCodes.Manual;
             }
 
+            var groupLessons = _db.GetLessons(_settings.SelectedGroup);
             var affected = existing is null
                 ? []
                 : LessonSeries.Select(groupLessons, existing, editor.Scope);
@@ -645,24 +646,26 @@ public partial class MainWindow : Window
         };
         editor.Finished += (_, _) =>
         {
-            ApplyHomework(editor, existing, homework, draft);
-            HideEditor();
+            if (ApplyHomework(editor, existing, homework, draft))
+            {
+                HideEditor();
+            }
         };
         ShowEditor(editor, isNew ? "Новая домашка" : "Редактирование домашки");
         return true;
     }
 
-    private void ApplyHomework(HomeworkEditWindow editor, Homework? existing, Homework homework, HomeworkCommentDraft draft)
+    private bool ApplyHomework(HomeworkEditWindow editor, Homework? existing, Homework homework, HomeworkCommentDraft draft)
     {
         if (editor.OpenSchedule)
         {
             ShowScheduleDay(editor.ScheduleDate);
-            return;
+            return true;
         }
 
         if (!editor.Accepted)
         {
-            return;
+            return true;
         }
 
         if (editor.Deleted && existing is not null)
@@ -671,10 +674,18 @@ public partial class MainWindow : Window
         }
         else
         {
+            var lessons = _db.GetLessons(_settings.SelectedGroup);
+            if (!HomeworkForm.LessonExists(lessons, homework.LessonId))
+            {
+                AppDialog.Info(this, "Нельзя сохранить", HomeworkForm.MissingLessonMessage);
+                return false;
+            }
+
             _db.SaveHomeworkWithComments(homework, draft.RemovedIds, draft.Added);
         }
 
         ReloadBoard();
+        return true;
     }
 
     private void ShowEditor(UIElement editor, string title)

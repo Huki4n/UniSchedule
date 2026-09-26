@@ -9,6 +9,10 @@ public static class HomeworkForm
     public const string TitleError = "Укажите название задания.";
     public const string DeadlineError = "Укажите дедлайн.";
     public const string NoLessonsMessage = "Сначала добавьте пару, к ней можно привязать домашку.";
+    public const string MissingLessonMessage = "Выбранная пара удалена. Выберите другую.";
+
+    public static bool LessonExists(IReadOnlyList<Lesson> lessons, long lessonId) =>
+        lessons.Any(lesson => lesson.Id == lessonId);
 
     public static string SlotLabel(Lesson lesson) =>
         $"{AcademicCalendar.DayName(lesson.DayOfWeek)} · {lesson.Start:hh\\:mm}";

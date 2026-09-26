@@ -23,6 +23,10 @@ public class LessonSeriesTests
         Assert.Equal([2, 3], LessonSeries.Select(lessons, monday, LessonEditScope.ThisAndFollowing).Select(item => item.Id).ToArray());
         Assert.Equal([3], LessonSeries.Select(lessons, laterMonday, LessonEditScope.ThisAndFollowing).Select(item => item.Id).ToArray());
         Assert.Empty(LessonSeries.Select(lessons, monday, LessonEditScope.OnlyThis));
+        // After a sibling is deleted from the board, Select must not keep its id.
+        Assert.Equal(
+            [3],
+            LessonSeries.Select([monday, friday, other], monday, LessonEditScope.All).Select(item => item.Id).ToArray());
 
         monday.Teacher = "Иванов";
         monday.Subject = "Сети и связь";
