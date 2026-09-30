@@ -191,10 +191,10 @@ public partial class MainWindow
                 return;
             }
 
-            UseGroup(lesson.GroupCode);
             _viewDate = DateTime.Today;
+            UseGroup(lesson.GroupCode);
             MainTabs.SelectedItem = ScheduleTab;
-            ReloadSchedule();
+            ReloadBoard();
             EditLesson(lesson, lesson.DayOfWeek);
             return;
         }
@@ -211,10 +211,10 @@ public partial class MainWindow
             return;
         }
 
-        UseGroup(owner.GroupCode);
         _month = new DateTime(homework.Deadline.Year, homework.Deadline.Month, 1);
+        UseGroup(owner.GroupCode);
         MainTabs.SelectedItem = HomeworkTab;
-        ReloadHomework();
+        ReloadBoard();
         EditHomework(homework, homework.LessonId);
     }
 
@@ -233,6 +233,7 @@ public partial class MainWindow
         CloseEditor();
         ReloadGroups();
         _suppressGroupChange = false;
+        ReloadBoard();
     }
 
     private void EditMenu_Click(object sender, RoutedEventArgs e)

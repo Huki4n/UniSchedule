@@ -226,11 +226,61 @@ public partial class MainWindow
                 }
             }
 
+            SyncElectiveSubjects(existing, lesson, batch, previousSubjects);
             RememberSubjectNames(existing, lesson, previousSubjects);
         }
 
         ReloadBoard();
         return true;
+    }
+
+    private void SyncElectiveSubjects(
+        Lesson? original,
+        Lesson saved,
+        IReadOnlyList<Lesson> batch,
+        IReadOnlyDictionary<long, string> previousSubjects
+    )
+    {
+        if (original is null)
+        {
+            return;
+        }
+
+        var renames = new List<(string Previous, string Next)>();
+        if (!string.IsNullOrWhiteSpace(saved.ElectiveKey))
+        {
+            renames.Add((original.Subject, saved.Subject));
+        }
+
+        foreach (var item in batch)
+        {
+            if (
+                item.Id == saved.Id
+                || string.IsNullOrWhiteSpace(item.ElectiveKey)
+                || !previousSubjects.TryGetValue(item.Id, out var previous)
+            )
+            {
+                continue;
+            }
+
+            renames.Add((previous, item.Subject));
+        }
+
+        if (renames.Count == 0)
+        {
+            return;
+        }
+
+        var selected = _db.GetElectiveSubjects(saved.GroupCode);
+        var updated = ElectiveChoice.RenameSelected(
+            selected,
+            renames,
+            _db.GetLessons(saved.GroupCode)
+        );
+        if (updated is not null && !ReferenceEquals(updated, selected))
+        {
+            _db.SetElectiveSubjects(saved.GroupCode, updated);
+        }
     }
 
     private void RememberSubjectNames(

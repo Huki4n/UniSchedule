@@ -75,6 +75,73 @@ public static class ElectiveChoice
             || lesson.Notes.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
+    public static IReadOnlyList<string>? RenameSelected(
+        IReadOnlyList<string>? selected,
+        IEnumerable<(string Previous, string Next)> renames,
+        IReadOnlyList<Lesson> groupLessons
+    )
+    {
+        if (selected is null)
+        {
+            return null;
+        }
+
+        var result = selected.ToList();
+        var changed = false;
+        foreach (var (previous, next) in renames)
+        {
+            var oldName = previous.Trim();
+            var newName = next.Trim();
+            if (
+                oldName.Length == 0
+                || newName.Length == 0
+                || string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                continue;
+            }
+
+            var index = result.FindIndex(subject =>
+                string.Equals(subject, oldName, StringComparison.OrdinalIgnoreCase)
+            );
+            if (index < 0)
+            {
+                continue;
+            }
+
+            var stillUsed = groupLessons.Any(lesson =>
+                !string.IsNullOrWhiteSpace(lesson.ElectiveKey)
+                && string.Equals(lesson.Subject.Trim(), oldName, StringComparison.OrdinalIgnoreCase)
+            );
+            var hasNew = result.Any(subject =>
+                string.Equals(subject, newName, StringComparison.OrdinalIgnoreCase)
+            );
+            if (stillUsed)
+            {
+                if (!hasNew)
+                {
+                    result.Add(newName);
+                    changed = true;
+                }
+
+                continue;
+            }
+
+            if (hasNew)
+            {
+                result.RemoveAt(index);
+            }
+            else
+            {
+                result[index] = newName;
+            }
+
+            changed = true;
+        }
+
+        return changed ? result : selected;
+    }
+
     private static void AddSelected(
         List<ElectiveRow> rows,
         List<Lesson> bucket,
