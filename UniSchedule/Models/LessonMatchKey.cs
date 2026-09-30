@@ -8,5 +8,6 @@ public static class LessonMatchKey
             lesson.GroupCode,
             ((int)lesson.DayOfWeek).ToString(),
             lesson.Start.ToString(@"hh\:mm"),
-            lesson.Subject);
+            lesson.Subject
+        );
 }

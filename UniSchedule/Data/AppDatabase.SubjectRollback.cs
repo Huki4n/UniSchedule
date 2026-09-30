@@ -10,9 +10,13 @@ public sealed partial class AppDatabase
         using var db = Open();
         PurgeSubjectRollbacks(db, day);
         using var cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT OriginalSubject FROM SubjectRollback WHERE LessonId=$id AND ChangedOn=$day";
+        cmd.CommandText =
+            "SELECT OriginalSubject FROM SubjectRollback WHERE LessonId=$id AND ChangedOn=$day";
         cmd.Parameters.AddWithValue("$id", lessonId);
-        cmd.Parameters.AddWithValue("$day", day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue(
+            "$day",
+            day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+        );
         return cmd.ExecuteScalar() as string;
     }
 
@@ -21,15 +25,17 @@ public sealed partial class AppDatabase
         using var db = Open();
         PurgeSubjectRollbacks(db, day);
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             INSERT INTO SubjectRollback (LessonId, OriginalSubject, ChangedOn)
             VALUES ($id, $subject, $day)
             ON CONFLICT(LessonId) DO NOTHING
             """;
         cmd.Parameters.AddWithValue("$id", lessonId);
         cmd.Parameters.AddWithValue("$subject", originalSubject.Trim());
-        cmd.Parameters.AddWithValue("$day", day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue(
+            "$day",
+            day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+        );
         cmd.ExecuteNonQuery();
     }
 
@@ -46,7 +52,10 @@ public sealed partial class AppDatabase
     {
         using var cmd = db.CreateCommand();
         cmd.CommandText = "DELETE FROM SubjectRollback WHERE ChangedOn<>$day";
-        cmd.Parameters.AddWithValue("$day", day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue(
+            "$day",
+            day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+        );
         cmd.ExecuteNonQuery();
     }
 }

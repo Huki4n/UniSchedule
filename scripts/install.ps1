@@ -10,7 +10,8 @@ $ErrorActionPreference = 'Stop'
 
 $appDir = Join-Path $env:LOCALAPPDATA 'UniSchedule\app'
 $destExe = Join-Path $appDir 'UniSchedule.exe'
-$shortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Расписание.lnk'
+$shortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\UniSchedule.lnk'
+$oldShortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Расписание.lnk'
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $runValue = 'UniSchedule'
 
@@ -65,8 +66,10 @@ if ($Action -eq 'uninstall') {
     }
 
     Remove-AutostartIfInstalled
-    if (Test-Path -LiteralPath $shortcut) {
-        Remove-Item -LiteralPath $shortcut -Force
+    foreach ($linkPath in @($shortcut, $oldShortcut)) {
+        if (Test-Path -LiteralPath $linkPath) {
+            Remove-Item -LiteralPath $linkPath -Force
+        }
     }
 
     if (Test-Path -LiteralPath $appDir) {
@@ -106,6 +109,9 @@ $link.TargetPath = $destExe
 $link.WorkingDirectory = $appDir
 $link.Description = 'UniSchedule'
 $link.Save()
+if (Test-Path -LiteralPath $oldShortcut) {
+    Remove-Item -LiteralPath $oldShortcut -Force
+}
 
 Write-Host "Установлено: $destExe"
 Write-Host "Ярлык: $shortcut"

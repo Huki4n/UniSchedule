@@ -14,11 +14,7 @@ public sealed class AppHarness : IDisposable
 
     private AppHarness()
     {
-        _thread = new Thread(Run)
-        {
-            IsBackground = true,
-            Name = "UniSchedule.E2E"
-        };
+        _thread = new Thread(Run) { IsBackground = true, Name = "UniSchedule.E2E" };
         _thread.SetApartmentState(ApartmentState.STA);
     }
 
@@ -34,7 +30,10 @@ public sealed class AppHarness : IDisposable
     public static string ExePath()
     {
         var baseDir = AppContext.BaseDirectory;
-        var configuration = baseDir.Contains($"{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+        var configuration = baseDir.Contains(
+            $"{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}",
+            StringComparison.OrdinalIgnoreCase
+        )
             ? "Release"
             : "Debug";
         var dir = new DirectoryInfo(baseDir);
@@ -54,7 +53,8 @@ public sealed class AppHarness : IDisposable
             "bin",
             configuration,
             "net10.0-windows10.0.17763.0",
-            "UniSchedule.exe");
+            "UniSchedule.exe"
+        );
         if (!File.Exists(exe))
         {
             throw new FileNotFoundException("Сначала соберите приложение.", exe);
@@ -63,8 +63,7 @@ public sealed class AppHarness : IDisposable
         return exe;
     }
 
-    public string Text(string automationId) =>
-        OnUi(() => Find<TextBlock>(automationId).Text);
+    public string Text(string automationId) => OnUi(() => Find<TextBlock>(automationId).Text);
 
     public void SetText(string automationId, string value) =>
         OnUi(() => Find<TextBox>(automationId).Text = value);
@@ -79,7 +78,9 @@ public sealed class AppHarness : IDisposable
         OnUi(() => Find<CheckBox>(automationId).IsChecked = false);
 
     public void Press(string automationId) =>
-        BeginUi(() => Find<Button>(automationId).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)));
+        BeginUi(() =>
+            Find<Button>(automationId).RaiseEvent(new RoutedEventArgs(Button.ClickEvent))
+        );
 
     public void OpenLesson(string subject) =>
         BeginUi(() => ((MainWindow)FindWindow("Main")!).OpenLesson(subject));
@@ -88,7 +89,11 @@ public sealed class AppHarness : IDisposable
         Wait(() => OnUi(() => IsShown(automationId)), "Нет окна " + automationId, timeout);
 
     public void WaitGone(string automationId) =>
-        Wait(() => OnUi(() => !IsShown(automationId)), "Окно не закрылось: " + automationId, TimeSpan.FromSeconds(10));
+        Wait(
+            () => OnUi(() => !IsShown(automationId)),
+            "Окно не закрылось: " + automationId,
+            TimeSpan.FromSeconds(10)
+        );
 
     public void CloseMain() => OnUi(() => FindWindow("Main")!.Close());
 
@@ -103,9 +108,7 @@ public sealed class AppHarness : IDisposable
                 _app.Dispatcher.Invoke(() => _app.Shutdown());
             }
         }
-        catch (Exception)
-        {
-        }
+        catch (Exception) { }
 
         _thread.Join(TimeSpan.FromSeconds(5));
         App.ArgsOverride = null;
@@ -141,20 +144,21 @@ public sealed class AppHarness : IDisposable
         }
     }
 
-    private void OnUi(Action action) => OnUi(() =>
-    {
-        action();
-        return true;
-    });
+    private void OnUi(Action action) =>
+        OnUi(() =>
+        {
+            action();
+            return true;
+        });
 
     private T OnUi<T>(Func<T> action)
     {
         var operation = Current().Dispatcher.InvokeAsync(action);
         if (!operation.Task.Wait(TimeSpan.FromSeconds(8)))
         {
-            throw new TimeoutException(_error is null
-                ? "Интерфейс не ответил."
-                : "Интерфейс не ответил: " + _error.Message);
+            throw new TimeoutException(
+                _error is null ? "Интерфейс не ответил." : "Интерфейс не ответил: " + _error.Message
+            );
         }
 
         return operation.Task.GetAwaiter().GetResult();
@@ -197,7 +201,10 @@ public sealed class AppHarness : IDisposable
         {
             var found = Find<FrameworkElement>(
                 window,
-                element => AutomationProperties.GetAutomationId(element) == automationId && element.IsVisible);
+                element =>
+                    AutomationProperties.GetAutomationId(element) == automationId
+                    && element.IsVisible
+            );
             if (found is not null)
             {
                 return true;

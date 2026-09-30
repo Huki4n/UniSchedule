@@ -37,12 +37,18 @@ public sealed partial class AppDatabase
         {
             var first = 60;
             var second = 15;
-            if (map.TryGetValue("FirstReminderMinutes", out var firstText) && int.TryParse(firstText, out var firstMin))
+            if (
+                map.TryGetValue("FirstReminderMinutes", out var firstText)
+                && int.TryParse(firstText, out var firstMin)
+            )
             {
                 first = firstMin;
             }
 
-            if (map.TryGetValue("SecondReminderMinutes", out var secondText) && int.TryParse(secondText, out var secondMin))
+            if (
+                map.TryGetValue("SecondReminderMinutes", out var secondText)
+                && int.TryParse(secondText, out var secondMin)
+            )
             {
                 second = secondMin;
             }
@@ -71,7 +77,11 @@ public sealed partial class AppDatabase
         Set(db, "SelectedGroup", settings.SelectedGroup);
         Set(db, "SemesterStart", settings.SemesterStart.ToString("yyyy-MM-dd"));
         Set(db, "ReminderMinutes", AppSettings.FormatReminderList(settings.ReminderMinutes));
-        Set(db, "HomeworkReminderMinutes", AppSettings.FormatHomeworkReminderList(settings.HomeworkReminderMinutes));
+        Set(
+            db,
+            "HomeworkReminderMinutes",
+            AppSettings.FormatHomeworkReminderList(settings.HomeworkReminderMinutes)
+        );
         using var dropDays = db.CreateCommand();
         dropDays.CommandText = "DELETE FROM Settings WHERE Key = 'HomeworkReminderDays'";
         dropDays.ExecuteNonQuery();
@@ -84,8 +94,7 @@ public sealed partial class AppDatabase
     private static void Set(SqliteConnection db, string key, string value)
     {
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             INSERT INTO Settings(Key, Value) VALUES ($k, $v)
             ON CONFLICT(Key) DO UPDATE SET Value=excluded.Value
             """;
@@ -96,12 +105,15 @@ public sealed partial class AppDatabase
 
     private static bool TryReadDate(string text, out DateTime date)
     {
-        if (DateTime.TryParseExact(
+        if (
+            DateTime.TryParseExact(
                 text,
                 "yyyy-MM-dd",
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
-                out date))
+                out date
+            )
+        )
         {
             return true;
         }

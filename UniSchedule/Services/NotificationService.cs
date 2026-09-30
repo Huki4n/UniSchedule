@@ -20,25 +20,23 @@ public sealed class NotificationService : IDisposable
     public event Action<Exception>? Failed;
 
     public NotificationService(AppDatabase db, AppSettings settings)
-        : this(db, settings, TryShow, TryShowHomework, ToastLog.DefaultPath)
-    {
-    }
+        : this(db, settings, TryShow, TryShowHomework, ToastLog.DefaultPath) { }
 
     internal NotificationService(
         AppDatabase db,
         AppSettings settings,
         Func<Lesson, int, Exception?> show,
-        string failureLogPath)
-        : this(db, settings, show, TryShowHomework, failureLogPath)
-    {
-    }
+        string failureLogPath
+    )
+        : this(db, settings, show, TryShowHomework, failureLogPath) { }
 
     internal NotificationService(
         AppDatabase db,
         AppSettings settings,
         Func<Lesson, int, Exception?> show,
         Func<Homework, string, int, Exception?> showHomework,
-        string failureLogPath)
+        string failureLogPath
+    )
     {
         _db = db;
         _settings = settings;
@@ -81,15 +79,17 @@ public sealed class NotificationService : IDisposable
     public void ShowTest(Lesson? lesson)
     {
         var error = _show(
-            lesson ?? new Lesson
-            {
-                Subject = "Тестовое уведомление",
-                Start = DateTime.Now.TimeOfDay,
-                End = DateTime.Now.TimeOfDay.Add(TimeSpan.FromMinutes(90)),
-                Room = "1301",
-                Teacher = "Проверка"
-            },
-            15);
+            lesson
+                ?? new Lesson
+                {
+                    Subject = "Тестовое уведомление",
+                    Start = DateTime.Now.TimeOfDay,
+                    End = DateTime.Now.TimeOfDay.Add(TimeSpan.FromMinutes(90)),
+                    Room = "1301",
+                    Teacher = "Проверка",
+                },
+            15
+        );
         if (error is not null)
         {
             Report(error, notify: true);
@@ -123,7 +123,11 @@ public sealed class NotificationService : IDisposable
             return;
         }
 
-        var lessons = _db.GetLessons(_settings.SelectedGroup);
+        var lessons = ElectiveChoice.Visible(
+            _db.GetLessons(_settings.SelectedGroup),
+            _db.GetElectivePicks(),
+            _db.GetElectiveSubjects(_settings.SelectedGroup)
+        );
         var due = NotificationPlanner.Collect(lessons, _settings, now, _db.WasNotificationSent);
         foreach (var item in due)
         {
@@ -131,6 +135,11 @@ public sealed class NotificationService : IDisposable
             if (error is null)
             {
                 _db.MarkNotificationSent(item.Lesson.Id, now.Date, item.OffsetMinutes);
+                foreach (var offset in item.SupersededOffsets)
+                {
+                    _db.MarkNotificationSent(item.Lesson.Id, now.Date, offset);
+                }
+
                 continue;
             }
 
@@ -142,14 +151,19 @@ public sealed class NotificationService : IDisposable
             _db.GetHomework(_settings.SelectedGroup),
             _settings,
             now,
-            _db.WasHomeworkNotificationSent);
+            _db.WasHomeworkNotificationSent
+        );
         foreach (var item in homeworkDue)
         {
             subjects.TryGetValue(item.Homework.LessonId, out var subject);
             var error = _showHomework(item.Homework, subject ?? "", item.OffsetMinutes);
             if (error is null)
             {
-                _db.MarkHomeworkNotificationSent(item.Homework.Id, item.FireDate, item.OffsetMinutes);
+                _db.MarkHomeworkNotificationSent(
+                    item.Homework.Id,
+                    item.FireDate,
+                    item.OffsetMinutes
+                );
                 continue;
             }
 
@@ -179,19 +193,24 @@ public sealed class NotificationService : IDisposable
 
     private static Exception? TryShow(Lesson lesson, int offsetMinutes)
     {
-        var when = offsetMinutes >= 60
-            ? "через час"
-            : $"через {offsetMinutes} мин.";
+        var when = offsetMinutes >= 60 ? "через час" : $"через {offsetMinutes} мин.";
         var place = string.IsNullOrWhiteSpace(lesson.Room)
-            ? lesson.HasLink ? "онлайн" : ""
+            ? lesson.HasLink
+                ? "онлайн"
+                : ""
             : lesson.Room;
-        var body = string.Join(" · ", new[] { lesson.TimeText, place, when }
-            .Where(s => !string.IsNullOrWhiteSpace(s)));
+        var body = string.Join(
+            " · ",
+            new[] { lesson.TimeText, place, when }.Where(s => !string.IsNullOrWhiteSpace(s))
+        );
 
         try
         {
+            var open =
+                lesson.Id > 0 ? ToastOpen.Argument(ToastOpen.Lesson, lesson.Id) : "action=open";
             var builder = new ToastContentBuilder()
-                .AddHeader("unischedule-lessons", "Расписание", "action=open")
+                .AddArgument("open", open)
+                .AddHeader("unischedule-lessons", "UniSchedule", open)
                 .AddText(lesson.Subject)
                 .AddText(body)
                 .AddAttributionText("UniSchedule");
@@ -203,9 +222,9 @@ public sealed class NotificationService : IDisposable
 
             if (MeetingLinks.TryGetWebUri(lesson.PrimaryUrl, out var uri))
             {
-                builder.AddButton(new ToastButton()
-                    .SetContent("Открыть ссылку")
-                    .SetProtocolActivation(uri));
+                builder.AddButton(
+                    new ToastButton().SetContent("Открыть ссылку").SetProtocolActivation(uri)
+                );
             }
 
             builder.SetToastDuration(ToastDuration.Short);
@@ -226,17 +245,22 @@ public sealed class NotificationService : IDisposable
 
         try
         {
+            var open =
+                homework.Id > 0
+                    ? ToastOpen.Argument(ToastOpen.Homework, homework.Id)
+                    : "action=open";
             var builder = new ToastContentBuilder()
-                .AddHeader("unischedule-homework", "Домашка", "action=open")
+                .AddArgument("open", open)
+                .AddHeader("unischedule-homework", "Домашка", open)
                 .AddText(title)
                 .AddText(body)
                 .AddAttributionText("UniSchedule");
 
             if (TryHomeworkLink(homework, out var uri))
             {
-                builder.AddButton(new ToastButton()
-                    .SetContent("Открыть ссылку")
-                    .SetProtocolActivation(uri));
+                builder.AddButton(
+                    new ToastButton().SetContent("Открыть ссылку").SetProtocolActivation(uri)
+                );
             }
 
             builder.SetToastDuration(ToastDuration.Short);

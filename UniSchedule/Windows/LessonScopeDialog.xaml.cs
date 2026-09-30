@@ -23,9 +23,11 @@ public partial class LessonScopeDialog : Window
 
     public LessonEditScope Scope { get; private set; } = LessonEditScope.OnlyThis;
 
-    private void OnlyThis_Click(object sender, RoutedEventArgs e) => Close(LessonEditScope.OnlyThis);
+    private void OnlyThis_Click(object sender, RoutedEventArgs e) =>
+        Close(LessonEditScope.OnlyThis);
 
-    private void Following_Click(object sender, RoutedEventArgs e) => Close(LessonEditScope.ThisAndFollowing);
+    private void Following_Click(object sender, RoutedEventArgs e) =>
+        Close(LessonEditScope.ThisAndFollowing);
 
     private void All_Click(object sender, RoutedEventArgs e) => Close(LessonEditScope.All);
 

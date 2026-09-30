@@ -20,7 +20,11 @@ public static class HomeworkForm
     public static bool MatchesSlot(Lesson lesson, Lesson card) =>
         lesson.DayOfWeek == card.DayOfWeek
         && lesson.Start == card.Start
-        && string.Equals(SubjectTitle(lesson.Subject), SubjectTitle(card.Subject), StringComparison.OrdinalIgnoreCase);
+        && string.Equals(
+            SubjectTitle(lesson.Subject),
+            SubjectTitle(card.Subject),
+            StringComparison.OrdinalIgnoreCase
+        );
 
     public static string SubjectTitle(string? subject)
     {
@@ -48,21 +52,28 @@ public static class HomeworkForm
             .ToList();
     }
 
-    public static IReadOnlyList<Lesson> DistinctSlots(IReadOnlyList<Lesson> lessons, long preferredId)
+    public static IReadOnlyList<Lesson> DistinctSlots(
+        IReadOnlyList<Lesson> lessons,
+        long preferredId
+    )
     {
         return lessons
             .GroupBy(lesson => (lesson.DayOfWeek, lesson.Start))
-            .Select(group => group.FirstOrDefault(lesson => lesson.Id == preferredId) ?? group.First())
+            .Select(group =>
+                group.FirstOrDefault(lesson => lesson.Id == preferredId) ?? group.First()
+            )
             .ToList();
     }
 
     private static readonly Regex WeekPhrase = new(
         @"\d+\s*[-–—]\s*\d+\s*нед\.?|с\s+\d+\s*нед\.?|\d+\s*нед\.?",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled
+    );
 
     private static readonly Regex TypeWord = new(
         @"\b(лекц(ия|ии)?|лек|практ(ика)?|прак|лаб(ораторная)?)\.?",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled
+    );
 
     private static bool TailIsWeekOrType(string tail)
     {
@@ -74,7 +85,12 @@ public static class HomeworkForm
 
     private static int DayOrder(DayOfWeek day) => ((int)day - (int)DayOfWeek.Monday + 7) % 7;
 
-    public static bool TryValidate(long? lessonId, string? title, DateTime? deadline, out string? error)
+    public static bool TryValidate(
+        long? lessonId,
+        string? title,
+        DateTime? deadline,
+        out string? error
+    )
     {
         if (lessonId is null or <= 0)
         {
@@ -107,7 +123,8 @@ public static class HomeworkForm
         string Url,
         string ExtraUrl,
         string PendingComment,
-        bool CommentsChanged);
+        bool CommentsChanged
+    );
 
     public static bool HasEdits(Fields baseline, Fields current)
     {
@@ -116,13 +133,14 @@ public static class HomeworkForm
         return left != right;
     }
 
-    private static Fields Normalize(Fields fields) => fields with
-    {
-        Title = fields.Title.Trim(),
-        Description = fields.Description.Trim(),
-        Deadline = fields.Deadline.Date,
-        Url = fields.Url.Trim(),
-        ExtraUrl = fields.ExtraUrl.Trim(),
-        PendingComment = fields.PendingComment.Trim()
-    };
+    private static Fields Normalize(Fields fields) =>
+        fields with
+        {
+            Title = fields.Title.Trim(),
+            Description = fields.Description.Trim(),
+            Deadline = fields.Deadline.Date,
+            Url = fields.Url.Trim(),
+            ExtraUrl = fields.ExtraUrl.Trim(),
+            PendingComment = fields.PendingComment.Trim(),
+        };
 }

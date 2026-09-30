@@ -6,14 +6,18 @@ public enum LessonEditScope
 {
     OnlyThis,
     ThisAndFollowing,
-    All
+    All,
 }
 
 public static class LessonSeries
 {
     public static bool SameName(Lesson left, Lesson right) =>
-        string.Equals(left.GroupCode, right.GroupCode, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(left.Subject.Trim(), right.Subject.Trim(), StringComparison.OrdinalIgnoreCase);
+        string.Equals(left.GroupCode, right.GroupCode, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(
+            left.Subject.Trim(),
+            right.Subject.Trim(),
+            StringComparison.OrdinalIgnoreCase
+        );
 
     public static bool HasOthers(IReadOnlyList<Lesson> lessons, Lesson current) =>
         lessons.Any(item => item.Id != current.Id && SameName(item, current));
@@ -30,7 +34,11 @@ public static class LessonSeries
         return other.Start > current.Start;
     }
 
-    public static IReadOnlyList<Lesson> Select(IReadOnlyList<Lesson> lessons, Lesson original, LessonEditScope scope)
+    public static IReadOnlyList<Lesson> Select(
+        IReadOnlyList<Lesson> lessons,
+        Lesson original,
+        LessonEditScope scope
+    )
     {
         if (scope == LessonEditScope.OnlyThis)
         {

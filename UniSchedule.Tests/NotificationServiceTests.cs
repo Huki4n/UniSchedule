@@ -14,19 +14,69 @@ public sealed class NotificationServiceTests : IDisposable
 
     public NotificationServiceTests()
     {
-        _directory = Path.Combine(Path.GetTempPath(), "unischedule-tests", Guid.NewGuid().ToString("N"));
+        _directory = Path.Combine(
+            Path.GetTempPath(),
+            "unischedule-tests",
+            Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_directory);
         _logPath = Path.Combine(_directory, "toast.txt");
         _database = new AppDatabase(Path.Combine(_directory, "schedule.db"));
-        _database.UpsertLesson(new Lesson
+        _database.UpsertLesson(
+            new Lesson
+            {
+                GroupCode = "11-321",
+                DayOfWeek = DayOfWeek.Friday,
+                Start = new TimeSpan(10, 0, 0),
+                End = new TimeSpan(11, 30, 0),
+                Subject = "Базы данных",
+                Source = LessonCodes.Manual,
+            }
+        );
+    }
+
+    [Fact]
+    public void Dispatch_CatchUp_MarksClosestOffsetAndClosesTheEarlierOne()
+    {
+        var shown = new List<int>();
+        var settings = new AppSettings
         {
-            GroupCode = "11-321",
-            DayOfWeek = DayOfWeek.Friday,
-            Start = new TimeSpan(10, 0, 0),
-            End = new TimeSpan(11, 30, 0),
-            Subject = "Базы данных",
-            Source = LessonCodes.Manual
-        });
+            SelectedGroup = "11-321",
+            SemesterStart = new DateTime(2026, 9, 1),
+            ReminderMinutes = [60, 15],
+            NotificationsEnabled = true,
+        };
+        var service = new NotificationService(
+            _database,
+            settings,
+            (_, offset) =>
+            {
+                shown.Add(offset);
+                return null;
+            },
+            _logPath
+        );
+
+        service.Dispatch(new DateTime(2026, 9, 4, 9, 50, 0));
+
+        Assert.Equal([15], shown);
+        var lessonId = _database.GetLessons("11-321")[0].Id;
+        Assert.True(_database.WasNotificationSent(lessonId, _dueAt.Date, 15));
+        Assert.True(_database.WasNotificationSent(lessonId, _dueAt.Date, 60));
+    }
+
+    [Fact]
+    public void ToastOpen_ReadsLessonAndHomeworkArguments()
+    {
+        Assert.True(ToastOpen.TryParse("open=lesson:12", out var kind, out var id));
+        Assert.Equal(ToastOpen.Lesson, kind);
+        Assert.Equal(12, id);
+        Assert.Equal("homework:4", ToastOpen.Argument(ToastOpen.Homework, 4));
+        Assert.True(ToastOpen.TryParse("open=homework:4", out kind, out id));
+        Assert.Equal(ToastOpen.Homework, kind);
+        Assert.Equal(4, id);
+        Assert.False(ToastOpen.TryParse("action=open", out _, out _));
+        Assert.False(ToastOpen.TryParse("lesson:0", out _, out _));
     }
 
     [Fact]
@@ -93,20 +143,26 @@ public sealed class NotificationServiceTests : IDisposable
         var lessonId = _database.GetLessons("11-321")[0].Id;
         var deadline = new DateTime(2026, 9, 4);
         var fireAt = new DateTime(2026, 9, 4, 23, 59, 0);
-        _database.UpsertHomework(new Homework
-        {
-            LessonId = lessonId,
-            Title = "ЛР",
-            Url = "https://example.test/hw",
-            Deadline = deadline
-        });
+        _database.UpsertHomework(
+            new Homework
+            {
+                LessonId = lessonId,
+                Title = "ЛР",
+                Url = "https://example.test/hw",
+                Deadline = deadline,
+            }
+        );
 
         var shown = new List<(string Title, string Subject, int Offset)>();
-        var service = Create((_, _) => null, (homework, subject, offset) =>
-        {
-            shown.Add((homework.Title, subject, offset));
-            return null;
-        }, [1]);
+        var service = Create(
+            (_, _) => null,
+            (homework, subject, offset) =>
+            {
+                shown.Add((homework.Title, subject, offset));
+                return null;
+            },
+            [1]
+        );
 
         service.Dispatch(fireAt);
         service.Dispatch(fireAt);
@@ -122,19 +178,25 @@ public sealed class NotificationServiceTests : IDisposable
     {
         var lessonId = _database.GetLessons("11-321")[0].Id;
         var fireAt = new DateTime(2026, 9, 4, 23, 59, 0);
-        var homeworkId = _database.UpsertHomework(new Homework
-        {
-            LessonId = lessonId,
-            Title = "ЛР",
-            Deadline = fireAt.Date
-        });
+        var homeworkId = _database.UpsertHomework(
+            new Homework
+            {
+                LessonId = lessonId,
+                Title = "ЛР",
+                Deadline = fireAt.Date,
+            }
+        );
 
         var shows = 0;
-        var service = Create((_, _) => null, (_, _, _) =>
-        {
-            shows++;
-            return new InvalidOperationException("hw toast");
-        }, [1]);
+        var service = Create(
+            (_, _) => null,
+            (_, _, _) =>
+            {
+                shows++;
+                return new InvalidOperationException("hw toast");
+            },
+            [1]
+        );
 
         service.Dispatch(fireAt);
         service.Dispatch(fireAt.AddMinutes(3));
@@ -146,14 +208,15 @@ public sealed class NotificationServiceTests : IDisposable
     private NotificationService Create(
         Func<Lesson, int, Exception?> show,
         Func<Homework, string, int, Exception?>? showHomework = null,
-        int[]? homeworkMinutes = null)
+        int[]? homeworkMinutes = null
+    )
     {
         var settings = new AppSettings
         {
             SelectedGroup = "11-321",
             SemesterStart = new DateTime(2026, 9, 1),
             ReminderMinutes = [60],
-            NotificationsEnabled = true
+            NotificationsEnabled = true,
         };
         if (homeworkMinutes is not null)
         {
@@ -171,8 +234,6 @@ public sealed class NotificationServiceTests : IDisposable
         {
             Directory.Delete(_directory, recursive: true);
         }
-        catch (IOException)
-        {
-        }
+        catch (IOException) { }
     }
 }

@@ -1,456 +1,1635 @@
-﻿<Window x:Class="UniSchedule.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="clr-namespace:UniSchedule.ViewModels"
-        Title="Расписание"
-        AutomationProperties.AutomationId="Main"
-        Height="900" Width="1440"
-        MinHeight="700" MinWidth="1100"
-        WindowStartupLocation="CenterScreen"
-        Background="{StaticResource AppBg}"
-        PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown">
+﻿<Window
+    x:Class="UniSchedule.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:UniSchedule.ViewModels"
+    Title="UniSchedule"
+    AutomationProperties.AutomationId="Main"
+    Height="900"
+    Width="1440"
+    MinHeight="700"
+    MinWidth="1100"
+    WindowStartupLocation="CenterScreen"
+    Background="{StaticResource AppBg}"
+    PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown"
+>
     <Grid>
-    <DockPanel>
-        <Border DockPanel.Dock="Top" Background="{StaticResource AppSurface}"
-                BorderBrush="{StaticResource AppBorder}" BorderThickness="0,0,0,1" Padding="20,14">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <DockPanel>
+            <Border
+                DockPanel.Dock="Top"
+                Background="{StaticResource AppSurface}"
+                BorderBrush="{StaticResource AppBorder}"
+                BorderThickness="0,0,0,1"
+                Padding="20,14"
+            >
                 <StackPanel>
-                    <TextBlock Text="Расписание ИТИС" FontSize="24" FontWeight="SemiBold"
-                               Foreground="{StaticResource AppText}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                        <TextBlock Text="Группа" VerticalAlignment="Center"
-                                   Foreground="{StaticResource AppMuted}" FontSize="16" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="GroupBox" AutomationProperties.AutomationId="GroupBox" Width="200" Height="36" FontSize="16"
-                                  IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
-                                  SelectionChanged="GroupBox_OnSelectionChanged"/>
-                        <TextBlock Text="Поиск" VerticalAlignment="Center"
-                                   Foreground="{StaticResource AppMuted}" FontSize="16" Margin="16,0,8,0"/>
-                        <TextBox x:Name="LessonSearchBox" AutomationProperties.AutomationId="LessonSearch" Width="240" Height="36"
-                                 ToolTip="Предмет, преподаватель или домашка"
-                                 TextChanged="LessonSearchBox_OnTextChanged"/>
-                    </StackPanel>
-                    <TextBlock x:Name="NextLessonLabel" AutomationProperties.AutomationId="NextLesson" Margin="0,8,0,0"
-                               Foreground="{StaticResource AppMuted}" FontSize="15"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="Импорт Excel" AutomationProperties.AutomationId="Import" Width="150" Height="40" Margin="0,0,8,0" Click="Import_Click"/>
-                    <Button Content="Добавить пару" AutomationProperties.AutomationId="AddLesson" Width="160" Height="40" Margin="0,0,8,0" Click="Add_Click"
-                            Style="{StaticResource AccentButton}"/>
-                    <Button Content="Настройки" AutomationProperties.AutomationId="Settings" Width="130" Height="40" Click="Settings_Click"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <TabControl x:Name="MainTabs" Margin="8,4,8,8" Background="Transparent" BorderThickness="0" Padding="0">
-            <TabControl.Template>
-                <ControlTemplate TargetType="TabControl">
-                    <DockPanel Background="Transparent">
-                        <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Background="Transparent" Margin="8,4,8,0"/>
-                        <ContentPresenter ContentSource="SelectedContent" Margin="0,8,0,0"/>
-                    </DockPanel>
-                </ControlTemplate>
-            </TabControl.Template>
-            <TabControl.Resources>
-                <Style TargetType="TabItem">
-                    <Setter Property="FontSize" Value="16"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="Padding" Value="0"/>
-                    <Setter Property="Margin" Value="0,0,8,0"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="TabItem">
-                                <Border x:Name="Bd" Background="Transparent" BorderThickness="0,0,0,2"
-                                        BorderBrush="Transparent" Padding="14,8,16,8" Cursor="Hand" ClipToBounds="False">
-                                    <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                      RecognizesAccessKey="True"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock
+                                Text="UniSchedule"
+                                FontSize="24"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource AppText}"
+                            />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <TextBlock
+                                    Text="Группа"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontSize="16"
+                                    Margin="0,0,8,0"
+                                />
+                                <ComboBox
+                                    x:Name="GroupBox"
+                                    AutomationProperties.AutomationId="GroupBox"
+                                    Width="200"
+                                    Height="36"
+                                    FontSize="16"
+                                    IsEditable="True"
+                                    IsTextSearchEnabled="False"
+                                    StaysOpenOnEdit="True"
+                                    SelectionChanged="GroupBox_OnSelectionChanged"
+                                />
+                                <TextBlock
+                                    Text="Поиск"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontSize="16"
+                                    Margin="16,0,8,0"
+                                />
+                                <TextBox
+                                    x:Name="LessonSearchBox"
+                                    AutomationProperties.AutomationId="LessonSearch"
+                                    Width="280"
+                                    Height="36"
+                                    ToolTip="Предмет, преподаватель или домашка"
+                                    TextChanged="LessonSearchBox_OnTextChanged"
+                                />
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                        >
+                            <Button
+                                Content="Импорт Excel"
+                                AutomationProperties.AutomationId="Import"
+                                Width="150"
+                                Height="40"
+                                Margin="0,0,8,0"
+                                Click="Import_Click"
+                            />
+                            <Button
+                                Content="Добавить пару"
+                                AutomationProperties.AutomationId="AddLesson"
+                                Width="160"
+                                Height="40"
+                                Margin="0,0,8,0"
+                                Click="Add_Click"
+                                Style="{StaticResource AccentButton}"
+                            />
+                            <Button
+                                Content="Настройки"
+                                AutomationProperties.AutomationId="Settings"
+                                Width="130"
+                                Height="40"
+                                Click="Settings_Click"
+                            />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel
+                        x:Name="ElectiveHost"
+                        Orientation="Horizontal"
+                        Margin="0,10,0,0"
+                        Visibility="Collapsed"
+                    >
+                        <TextBlock
+                            Text="Курс по выбору"
+                            VerticalAlignment="Center"
+                            Foreground="{StaticResource AppMuted}"
+                            FontSize="16"
+                            Margin="0,0,8,0"
+                        />
+                        <Grid Width="360" VerticalAlignment="Center">
+                            <ToggleButton
+                                x:Name="ElectiveBox"
+                                AutomationProperties.AutomationId="ElectiveBox"
+                                Height="36"
+                                Focusable="False"
+                                Template="{StaticResource ComboBoxToggleButton}"
+                            />
+                            <TextBlock
+                                x:Name="ElectiveSummary"
+                                Margin="12,0,32,0"
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                TextTrimming="CharacterEllipsis"
+                                IsHitTestVisible="False"
+                            />
+                            <Popup
+                                Placement="Bottom"
+                                PlacementTarget="{Binding ElementName=ElectiveBox}"
+                                AllowsTransparency="True"
+                                PopupAnimation="Fade"
+                                StaysOpen="False"
+                                IsOpen="{Binding IsChecked, ElementName=ElectiveBox, Mode=TwoWay}"
+                            >
+                                <Border
+                                    Margin="0,4,0,0"
+                                    Padding="4"
+                                    CornerRadius="8"
+                                    BorderThickness="1"
+                                    Background="{StaticResource AppCard}"
+                                    BorderBrush="{StaticResource AppBorder}"
+                                    MinWidth="{Binding ActualWidth, ElementName=ElectiveBox}"
+                                >
+                                    <StackPanel x:Name="ElectiveList" />
                                 </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AppAccent}"/>
-                                        <Setter Property="Foreground" Value="{StaticResource AppText}"/>
-                                    </Trigger>
-                                    <Trigger Property="IsSelected" Value="False">
-                                        <Setter Property="Foreground" Value="{StaticResource AppMuted}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </TabControl.Resources>
-
-            <TabItem x:Name="ScheduleTab" AutomationProperties.AutomationId="ScheduleTab">
-                <TabItem.Header>
-                    <TextBlock Text="Расписание" Padding="0,0,2,0"/>
-                </TabItem.Header>
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,10,8">
-                        <Button AutomationProperties.AutomationId="PrevWeek" Width="36" Height="36" Padding="0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="PrevWeek_Click">
-                            <Path Data="M 6 0 L 0 6 L 6 12" Width="8" Height="12" Stretch="Fill"
-                                  Stroke="{StaticResource AppMuted}" StrokeThickness="1.6"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                        </Button>
-                        <TextBlock x:Name="WeekLabel" AutomationProperties.AutomationId="WeekLabel" VerticalAlignment="Center"
-                                   Margin="12,0" MinWidth="200" TextAlignment="Center"
-                                   Foreground="{StaticResource AppAccent}" FontWeight="SemiBold" FontSize="16"/>
-                        <Button AutomationProperties.AutomationId="NextWeek" Width="36" Height="36" Padding="0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="NextWeek_Click">
-                            <Path Data="M 0 0 L 6 6 L 0 12" Width="8" Height="12" Stretch="Fill"
-                                  Stroke="{StaticResource AppMuted}" StrokeThickness="1.6"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                        </Button>
-                        <Button Content="Сегодня" AutomationProperties.AutomationId="TodayWeek" Height="36" Width="110"
-                                Padding="0" Margin="12,0,0,0" VerticalContentAlignment="Center" Click="TodayWeek_Click"/>
+                            </Popup>
+                        </Grid>
                     </StackPanel>
-                    <ItemsControl x:Name="DaysHost" Margin="10,0,10,0">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Rows="1"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:DayColumnVm}">
-                                <Border Margin="3,0" CornerRadius="10" BorderThickness="1" Padding="8,8,4,8">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="{StaticResource AppSurface}"/>
-                                            <Setter Property="BorderBrush" Value="{StaticResource AppBorder}"/>
+                    <TextBlock
+                        x:Name="NextLessonLabel"
+                        AutomationProperties.AutomationId="NextLesson"
+                        Margin="0,8,0,0"
+                        Foreground="{StaticResource AppMuted}"
+                        FontSize="15"
+                        MouseLeftButtonUp="NextLesson_OnClick"
+                    />
+                </StackPanel>
+            </Border>
+
+            <TabControl
+                x:Name="MainTabs"
+                Margin="8,4,8,8"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="0"
+            >
+                <TabControl.Template>
+                    <ControlTemplate TargetType="TabControl">
+                        <DockPanel Background="Transparent">
+                            <TabPanel
+                                DockPanel.Dock="Top"
+                                IsItemsHost="True"
+                                Background="Transparent"
+                                Margin="8,4,8,0"
+                            />
+                            <ContentPresenter ContentSource="SelectedContent" Margin="0,8,0,0" />
+                        </DockPanel>
+                    </ControlTemplate>
+                </TabControl.Template>
+                <TabControl.Resources>
+                    <Style TargetType="TabItem">
+                        <Setter Property="FontSize" Value="16" />
+                        <Setter Property="FontWeight" Value="SemiBold" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,8,0" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                    <Border
+                                        x:Name="Bd"
+                                        Background="Transparent"
+                                        BorderThickness="0,0,0,2"
+                                        BorderBrush="Transparent"
+                                        Padding="14,8,16,8"
+                                        Cursor="Hand"
+                                        ClipToBounds="False"
+                                    >
+                                        <ContentPresenter
+                                            ContentSource="Header"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            RecognizesAccessKey="True"
+                                        />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter
+                                                TargetName="Bd"
+                                                Property="BorderBrush"
+                                                Value="{StaticResource AppAccent}"
+                                            />
+                                            <Setter
+                                                Property="Foreground"
+                                                Value="{StaticResource AppText}"
+                                            />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="False">
+                                            <Setter
+                                                Property="Foreground"
+                                                Value="{StaticResource AppMuted}"
+                                            />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabControl.Resources>
+
+                <TabItem x:Name="ScheduleTab" AutomationProperties.AutomationId="ScheduleTab">
+                    <TabItem.Header>
+                        <TextBlock Text="Расписание" Padding="0,0,2,0" />
+                    </TabItem.Header>
+                    <DockPanel>
+                        <StackPanel
+                            DockPanel.Dock="Top"
+                            Orientation="Horizontal"
+                            Margin="10,0,10,8"
+                        >
+                            <Button
+                                AutomationProperties.AutomationId="PrevWeek"
+                                Width="36"
+                                Height="36"
+                                Padding="0"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Click="PrevWeek_Click"
+                            >
+                                <Path
+                                    Data="M 6 0 L 0 6 L 6 12"
+                                    Width="8"
+                                    Height="12"
+                                    Stretch="Fill"
+                                    Stroke="{StaticResource AppMuted}"
+                                    StrokeThickness="1.6"
+                                    StrokeStartLineCap="Round"
+                                    StrokeEndLineCap="Round"
+                                />
+                            </Button>
+                            <TextBlock
+                                x:Name="WeekLabel"
+                                AutomationProperties.AutomationId="WeekLabel"
+                                VerticalAlignment="Center"
+                                Margin="12,0"
+                                MinWidth="200"
+                                TextAlignment="Center"
+                                Foreground="{StaticResource AppAccent}"
+                                FontWeight="SemiBold"
+                                FontSize="16"
+                            />
+                            <Button
+                                AutomationProperties.AutomationId="NextWeek"
+                                Width="36"
+                                Height="36"
+                                Padding="0"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Click="NextWeek_Click"
+                            >
+                                <Path
+                                    Data="M 0 0 L 6 6 L 0 12"
+                                    Width="8"
+                                    Height="12"
+                                    Stretch="Fill"
+                                    Stroke="{StaticResource AppMuted}"
+                                    StrokeThickness="1.6"
+                                    StrokeStartLineCap="Round"
+                                    StrokeEndLineCap="Round"
+                                />
+                            </Button>
+                            <Button
+                                Content="Сегодня"
+                                AutomationProperties.AutomationId="TodayWeek"
+                                Height="36"
+                                Width="110"
+                                Padding="0"
+                                Margin="12,0,0,0"
+                                VerticalContentAlignment="Center"
+                                Click="TodayWeek_Click"
+                            />
+                        </StackPanel>
+                        <ScrollViewer
+                            x:Name="BoardScroll"
+                            Margin="10,0,10,0"
+                            VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled"
+                            SizeChanged="Board_OnSizeChanged"
+                        >
+                            <Grid>
+                                <ItemsControl
+                                    x:Name="DaysHost"
+                                    VerticalAlignment="Stretch"
+                                    IsHitTestVisible="False"
+                                >
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource AppToday}"/>
-                                                    <Setter Property="BorderBrush" Value="{StaticResource AppTodayBorder}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource AppToday}"/>
-                                                    <Setter Property="BorderBrush" Value="{StaticResource AppAccent}"/>
-                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                <DataTrigger
+                                                    Binding="{Binding NarrowBoard, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    Value="True"
+                                                >
+                                                    <Setter
+                                                        Property="Visibility"
+                                                        Value="Collapsed"
+                                                    />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Border.Style>
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" FontWeight="SemiBold"
-                                                   FontSize="17" Foreground="{StaticResource AppText}" Margin="4,0,4,8"
-                                                   TextWrapping="Wrap"/>
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                                      PanningMode="VerticalOnly">
-                                            <ItemsControl ItemsSource="{Binding Lessons}">
+                                    </ItemsControl.Style>
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="6" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:DayColumnVm}">
+                                            <Border
+                                                Margin="3,0"
+                                                CornerRadius="10"
+                                                BorderThickness="1"
+                                                MinHeight="220"
+                                            >
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter
+                                                            Property="Background"
+                                                            Value="{StaticResource AppSurface}"
+                                                        />
+                                                        <Setter
+                                                            Property="BorderBrush"
+                                                            Value="{StaticResource AppBorder}"
+                                                        />
+                                                        <Style.Triggers>
+                                                            <DataTrigger
+                                                                Binding="{Binding IsToday}"
+                                                                Value="True"
+                                                            >
+                                                                <Setter
+                                                                    Property="Background"
+                                                                    Value="{StaticResource AppToday}"
+                                                                />
+                                                                <Setter
+                                                                    Property="BorderBrush"
+                                                                    Value="{StaticResource AppTodayBorder}"
+                                                                />
+                                                            </DataTrigger>
+                                                            <DataTrigger
+                                                                Binding="{Binding IsHighlighted}"
+                                                                Value="True"
+                                                            >
+                                                                <Setter
+                                                                    Property="Background"
+                                                                    Value="{StaticResource AppToday}"
+                                                                />
+                                                                <Setter
+                                                                    Property="BorderBrush"
+                                                                    Value="{StaticResource AppAccent}"
+                                                                />
+                                                                <Setter
+                                                                    Property="BorderThickness"
+                                                                    Value="2"
+                                                                />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock
+                                                    Text="{x:Static vm:ScheduleComposer.EmptyDayText}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{StaticResource AppMuted}"
+                                                    FontSize="15"
+                                                >
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter
+                                                                Property="Visibility"
+                                                                Value="Collapsed"
+                                                            />
+                                                            <Style.Triggers>
+                                                                <DataTrigger
+                                                                    Binding="{Binding IsEmpty}"
+                                                                    Value="True"
+                                                                >
+                                                                    <Setter
+                                                                        Property="Visibility"
+                                                                        Value="Visible"
+                                                                    />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <ItemsControl x:Name="RowsHost" VerticalAlignment="Top">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:BoardRowVm}">
+                                            <ItemsControl ItemsSource="{Binding Cells}">
+                                                <ItemsControl.Style>
+                                                    <Style TargetType="ItemsControl">
+                                                        <Setter Property="ItemsPanel">
+                                                            <Setter.Value>
+                                                                <ItemsPanelTemplate>
+                                                                    <UniformGrid Columns="6" />
+                                                                </ItemsPanelTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger
+                                                                Binding="{Binding NarrowBoard, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                Value="True"
+                                                            >
+                                                                <Setter Property="ItemsPanel">
+                                                                    <Setter.Value>
+                                                                        <ItemsPanelTemplate>
+                                                                            <UniformGrid Columns="1" />
+                                                                        </ItemsPanelTemplate>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ItemsControl.Style>
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="{x:Type vm:LessonCardVm}">
-                                                        <Border Margin="0,0,4,6" Padding="10,9" CornerRadius="8" Cursor="Hand"
-                                                                MouseLeftButtonUp="LessonCard_OnClick"
-                                                                Opacity="{Binding IsDimmed, Converter={StaticResource DimConverter}}">
+                                                    <DataTemplate DataType="{x:Type vm:BoardCellVm}">
+                                                        <Border CornerRadius="10">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="{StaticResource AppCard}"/>
-                                                                    <Setter Property="BorderBrush" Value="Transparent"/>
-                                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                                    <Setter
+                                                                        Property="Background"
+                                                                        Value="Transparent"
+                                                                    />
+                                                                    <Setter
+                                                                        Property="BorderThickness"
+                                                                        Value="0"
+                                                                    />
+                                                                    <Setter
+                                                                        Property="Padding"
+                                                                        Value="0"
+                                                                    />
+                                                                    <Setter
+                                                                        Property="Margin"
+                                                                        Value="0"
+                                                                    />
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
-                                                                            <Setter Property="BorderBrush" Value="{StaticResource AppAccent}"/>
-                                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                                        <DataTrigger
+                                                                            Binding="{Binding ShowTitle}"
+                                                                            Value="True"
+                                                                        >
+                                                                            <Setter
+                                                                                Property="Background"
+                                                                                Value="{StaticResource AppSurface}"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="BorderBrush"
+                                                                                Value="{StaticResource AppBorder}"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="BorderThickness"
+                                                                                Value="1"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="Padding"
+                                                                                Value="8,8,4,8"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="Margin"
+                                                                                Value="0,0,0,8"
+                                                                            />
+                                                                        </DataTrigger>
+                                                                        <MultiDataTrigger>
+                                                                            <MultiDataTrigger.Conditions>
+                                                                                <Condition
+                                                                                    Binding="{Binding ShowTitle}"
+                                                                                    Value="True"
+                                                                                />
+                                                                                <Condition
+                                                                                    Binding="{Binding Day.IsToday}"
+                                                                                    Value="True"
+                                                                                />
+                                                                            </MultiDataTrigger.Conditions>
+                                                                            <Setter
+                                                                                Property="Background"
+                                                                                Value="{StaticResource AppToday}"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="BorderBrush"
+                                                                                Value="{StaticResource AppTodayBorder}"
+                                                                            />
+                                                                        </MultiDataTrigger>
+                                                                        <MultiDataTrigger>
+                                                                            <MultiDataTrigger.Conditions>
+                                                                                <Condition
+                                                                                    Binding="{Binding ShowTitle}"
+                                                                                    Value="True"
+                                                                                />
+                                                                                <Condition
+                                                                                    Binding="{Binding Day.IsHighlighted}"
+                                                                                    Value="True"
+                                                                                />
+                                                                            </MultiDataTrigger.Conditions>
+                                                                            <Setter
+                                                                                Property="Background"
+                                                                                Value="{StaticResource AppToday}"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="BorderBrush"
+                                                                                Value="{StaticResource AppAccent}"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="BorderThickness"
+                                                                                Value="2"
+                                                                            />
+                                                                        </MultiDataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <DockPanel Margin="11,0,7,0">
+                                                                <TextBlock
+                                                                    DockPanel.Dock="Top"
+                                                                    Text="{Binding Day.Title}"
+                                                                    FontWeight="SemiBold"
+                                                                    FontSize="16"
+                                                                    Foreground="{StaticResource AppText}"
+                                                                    Margin="0,10,4,8"
+                                                                    TextWrapping="Wrap"
+                                                                >
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter
+                                                                                Property="Visibility"
+                                                                                Value="Collapsed"
+                                                                            />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger
+                                                                                    Binding="{Binding IsHeader}"
+                                                                                    Value="True"
+                                                                                >
+                                                                                    <Setter
+                                                                                        Property="Visibility"
+                                                                                        Value="Visible"
+                                                                                    />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger
+                                                                                    Binding="{Binding ShowTitle}"
+                                                                                    Value="True"
+                                                                                >
+                                                                                    <Setter
+                                                                                        Property="Visibility"
+                                                                                        Value="Visible"
+                                                                                    />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <TextBlock
+                                                                    DockPanel.Dock="Top"
+                                                                    Text="{x:Static vm:ScheduleComposer.EmptyDayText}"
+                                                                    HorizontalAlignment="Center"
+                                                                    Margin="0,8,0,12"
+                                                                    Foreground="{StaticResource AppMuted}"
+                                                                    FontSize="15"
+                                                                >
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter
+                                                                                Property="Visibility"
+                                                                                Value="Collapsed"
+                                                                            />
+                                                                            <Style.Triggers>
+                                                                                <MultiDataTrigger>
+                                                                                    <MultiDataTrigger.Conditions>
+                                                                                        <Condition
+                                                                                            Binding="{Binding ShowTitle}"
+                                                                                            Value="True"
+                                                                                        />
+                                                                                        <Condition
+                                                                                            Binding="{Binding Day.IsEmpty}"
+                                                                                            Value="True"
+                                                                                        />
+                                                                                    </MultiDataTrigger.Conditions>
+                                                                                    <Setter
+                                                                                        Property="Visibility"
+                                                                                        Value="Visible"
+                                                                                    />
+                                                                                </MultiDataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <ItemsControl
+                                                                    ItemsSource="{Binding Cards}"
+                                                                    VerticalAlignment="Top"
+                                                                >
+                                                                    <ItemsControl.Style>
+                                                                        <Style TargetType="ItemsControl">
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger
+                                                                                    Binding="{Binding IsHeader}"
+                                                                                    Value="True"
+                                                                                >
+                                                                                    <Setter
+                                                                                        Property="Visibility"
+                                                                                        Value="Collapsed"
+                                                                                    />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </ItemsControl.Style>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate DataType="{x:Type vm:LessonCardVm}">
+                                                                            <Border
+                                                                                Margin="0,0,4,6"
+                                                                                Padding="12,10"
+                                                                                CornerRadius="10"
+                                                                                Cursor="Hand"
+                                                                                VerticalAlignment="Top"
+                                                                                MouseLeftButtonUp="LessonCard_OnClick"
+                                                                                Opacity="{Binding IsDimmed, Converter={StaticResource DimConverter}}"
+                                                                            >
+                                                                                <Border.Style>
+                                                                                    <Style TargetType="Border">
+                                                                                        <Setter
+                                                                                            Property="Background"
+                                                                                            Value="{StaticResource AppCard}"
+                                                                                        />
+                                                                                        <Setter
+                                                                                            Property="BorderBrush"
+                                                                                            Value="Transparent"
+                                                                                        />
+                                                                                        <Setter
+                                                                                            Property="BorderThickness"
+                                                                                            Value="1"
+                                                                                        />
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger
+                                                                                                Binding="{Binding IsOverlap}"
+                                                                                                Value="True"
+                                                                                            >
+                                                                                                <Setter
+                                                                                                    Property="BorderBrush"
+                                                                                                    Value="{StaticResource AppWarning}"
+                                                                                                />
+                                                                                            </DataTrigger>
+                                                                                            <DataTrigger
+                                                                                                Binding="{Binding IsCurrent}"
+                                                                                                Value="True"
+                                                                                            >
+                                                                                                <Setter
+                                                                                                    Property="BorderBrush"
+                                                                                                    Value="{StaticResource AppAccent}"
+                                                                                                />
+                                                                                                <Setter
+                                                                                                    Property="BorderThickness"
+                                                                                                    Value="2"
+                                                                                                />
+                                                                                            </DataTrigger>
+                                                                                            <DataTrigger
+                                                                                                Binding="{Binding IsHighlighted}"
+                                                                                                Value="True"
+                                                                                            >
+                                                                                                <Setter
+                                                                                                    Property="BorderBrush"
+                                                                                                    Value="{StaticResource AppAccent}"
+                                                                                                />
+                                                                                                <Setter
+                                                                                                    Property="BorderThickness"
+                                                                                                    Value="2"
+                                                                                                />
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </Border.Style>
+                                                                                <DockPanel>
+                                                                                    <Border
+                                                                                        DockPanel.Dock="Left"
+                                                                                        Width="4"
+                                                                                        CornerRadius="2"
+                                                                                        Margin="0,0,10,0"
+                                                                                        Background="{Binding Accent, Converter={StaticResource HexBrushConverter}}"
+                                                                                    />
+                                                                                    <StackPanel>
+                                                                                        <Grid>
+                                                                                            <Grid.ColumnDefinitions>
+                                                                                                <ColumnDefinition Width="*" />
+                                                                                                <ColumnDefinition Width="Auto" />
+                                                                                            </Grid.ColumnDefinitions>
+                                                                                            <StackPanel
+                                                                                                Orientation="Horizontal"
+                                                                                                VerticalAlignment="Center"
+                                                                                            >
+                                                                                                <TextBlock
+                                                                                                    Text="{Binding StartText}"
+                                                                                                    FontWeight="SemiBold"
+                                                                                                    FontSize="14"
+                                                                                                    Foreground="{StaticResource AppText}"
+                                                                                                />
+                                                                                                <TextBlock
+                                                                                                    Text="–"
+                                                                                                    Margin="4,0"
+                                                                                                    FontSize="13"
+                                                                                                    Foreground="{StaticResource AppMuted}"
+                                                                                                />
+                                                                                                <TextBlock
+                                                                                                    Text="{Binding EndText}"
+                                                                                                    FontSize="13"
+                                                                                                    Foreground="{StaticResource AppMuted}"
+                                                                                                />
+                                                                                            </StackPanel>
+                                                                                            <Border
+                                                                                                Grid.Column="1"
+                                                                                                CornerRadius="6"
+                                                                                                Padding="8,2"
+                                                                                                VerticalAlignment="Center"
+                                                                                                Margin="8,0,0,0"
+                                                                                                BorderBrush="{StaticResource AppBorder}"
+                                                                                                BorderThickness="1"
+                                                                                            >
+                                                                                                <Border.Style>
+                                                                                                    <Style TargetType="Border">
+                                                                                                        <Setter
+                                                                                                            Property="Visibility"
+                                                                                                            Value="Collapsed"
+                                                                                                        />
+                                                                                                        <Style.Triggers>
+                                                                                                            <DataTrigger
+                                                                                                                Binding="{Binding ShowOnline}"
+                                                                                                                Value="True"
+                                                                                                            >
+                                                                                                                <Setter
+                                                                                                                    Property="Visibility"
+                                                                                                                    Value="Visible"
+                                                                                                                />
+                                                                                                            </DataTrigger>
+                                                                                                        </Style.Triggers>
+                                                                                                    </Style>
+                                                                                                </Border.Style>
+                                                                                                <TextBlock
+                                                                                                    Text="Онлайн"
+                                                                                                    FontSize="12"
+                                                                                                    Foreground="{StaticResource AppText}"
+                                                                                                />
+                                                                                            </Border>
+                                                                                        </Grid>
+                                                                                        <TextBlock
+                                                                                            Text="{Binding Subject}"
+                                                                                            FontWeight="SemiBold"
+                                                                                            FontSize="16"
+                                                                                            Margin="0,4,0,0"
+                                                                                            TextWrapping="Wrap"
+                                                                                            Foreground="{StaticResource AppText}"
+                                                                                        />
+                                                                                        <TextBlock
+                                                                                            Text="{Binding Detail}"
+                                                                                            FontSize="13"
+                                                                                            Margin="0,4,0,0"
+                                                                                            Foreground="{StaticResource AppMuted}"
+                                                                                            TextWrapping="Wrap"
+                                                                                        >
+                                                                                            <TextBlock.Style>
+                                                                                                <Style TargetType="TextBlock">
+                                                                                                    <Style.Triggers>
+                                                                                                        <DataTrigger
+                                                                                                            Binding="{Binding Detail}"
+                                                                                                            Value=""
+                                                                                                        >
+                                                                                                            <Setter
+                                                                                                                Property="Visibility"
+                                                                                                                Value="Collapsed"
+                                                                                                            />
+                                                                                                            <Setter
+                                                                                                                Property="Margin"
+                                                                                                                Value="0"
+                                                                                                            />
+                                                                                                        </DataTrigger>
+                                                                                                    </Style.Triggers>
+                                                                                                </Style>
+                                                                                            </TextBlock.Style>
+                                                                                        </TextBlock>
+                                                                                        <TextBlock
+                                                                                            Text="{Binding Notes}"
+                                                                                            FontSize="13"
+                                                                                            Margin="0,4,0,0"
+                                                                                            Foreground="{StaticResource AppMuted}"
+                                                                                            TextTrimming="CharacterEllipsis"
+                                                                                            TextWrapping="NoWrap"
+                                                                                        >
+                                                                                            <TextBlock.Style>
+                                                                                                <Style TargetType="TextBlock">
+                                                                                                    <Style.Triggers>
+                                                                                                        <DataTrigger
+                                                                                                            Binding="{Binding Notes}"
+                                                                                                            Value=""
+                                                                                                        >
+                                                                                                            <Setter
+                                                                                                                Property="Visibility"
+                                                                                                                Value="Collapsed"
+                                                                                                            />
+                                                                                                            <Setter
+                                                                                                                Property="Margin"
+                                                                                                                Value="0"
+                                                                                                            />
+                                                                                                        </DataTrigger>
+                                                                                                    </Style.Triggers>
+                                                                                                </Style>
+                                                                                            </TextBlock.Style>
+                                                                                        </TextBlock>
+                                                                                        <TextBlock
+                                                                                            Text="пересечение"
+                                                                                            FontSize="12"
+                                                                                            Foreground="{StaticResource AppWarning}"
+                                                                                            Margin="0,4,0,0"
+                                                                                        >
+                                                                                            <TextBlock.Style>
+                                                                                                <Style TargetType="TextBlock">
+                                                                                                    <Setter
+                                                                                                        Property="Visibility"
+                                                                                                        Value="Collapsed"
+                                                                                                    />
+                                                                                                    <Style.Triggers>
+                                                                                                        <DataTrigger
+                                                                                                            Binding="{Binding IsOverlap}"
+                                                                                                            Value="True"
+                                                                                                        >
+                                                                                                            <Setter
+                                                                                                                Property="Visibility"
+                                                                                                                Value="Visible"
+                                                                                                            />
+                                                                                                        </DataTrigger>
+                                                                                                    </Style.Triggers>
+                                                                                                </Style>
+                                                                                            </TextBlock.Style>
+                                                                                        </TextBlock>
+                                                                                        <ItemsControl ItemsSource="{Binding Links}">
+                                                                                            <ItemsControl.ItemTemplate>
+                                                                                                <DataTemplate DataType="{x:Type vm:CardLinkVm}">
+                                                                                                    <TextBlock
+                                                                                                        Text="{Binding Label}"
+                                                                                                        FontSize="13"
+                                                                                                        Margin="0,8,0,0"
+                                                                                                        Foreground="{StaticResource AppAccent}"
+                                                                                                        Cursor="Hand"
+                                                                                                        TextTrimming="CharacterEllipsis"
+                                                                                                        TextWrapping="NoWrap"
+                                                                                                        MouseLeftButtonUp="CardLink_OnClick"
+                                                                                                    />
+                                                                                                </DataTemplate>
+                                                                                            </ItemsControl.ItemTemplate>
+                                                                                        </ItemsControl>
+                                                                                        <ItemsControl ItemsSource="{Binding HomeworkLinks}">
+                                                                                            <ItemsControl.ItemTemplate>
+                                                                                                <DataTemplate DataType="{x:Type vm:HomeworkLinkVm}">
+                                                                                                    <TextBlock
+                                                                                                        Text="{Binding Label}"
+                                                                                                        FontSize="13"
+                                                                                                        Margin="0,6,0,0"
+                                                                                                        Foreground="{StaticResource AppAccent}"
+                                                                                                        Cursor="Hand"
+                                                                                                        TextWrapping="Wrap"
+                                                                                                        MouseLeftButtonUp="LessonHomework_OnClick"
+                                                                                                    />
+                                                                                                </DataTemplate>
+                                                                                            </ItemsControl.ItemTemplate>
+                                                                                        </ItemsControl>
+                                                                                    </StackPanel>
+                                                                                </DockPanel>
+                                                                                <Border.ContextMenu>
+                                                                                    <ContextMenu>
+                                                                                        <MenuItem
+                                                                                            Header="Изменить"
+                                                                                            Click="EditMenu_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="Удалить"
+                                                                                            Click="DeleteMenu_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="Открыть ссылку"
+                                                                                            Click="OpenLinkMenu_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="Домашки пары"
+                                                                                            Click="HomeworkOfLesson_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="Добавить домашку"
+                                                                                            Click="AddHomeworkForLesson_Click"
+                                                                                        />
+                                                                                    </ContextMenu>
+                                                                                </Border.ContextMenu>
+                                                                            </Border>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </DockPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </ScrollViewer>
+                    </DockPanel>
+                </TabItem>
+
+                <TabItem x:Name="HomeworkTab" AutomationProperties.AutomationId="HomeworkTab">
+                    <TabItem.Header>
+                        <TextBlock Text="Домашки" Padding="0,0,2,0" />
+                    </TabItem.Header>
+                    <DockPanel>
+                        <StackPanel
+                            DockPanel.Dock="Top"
+                            Orientation="Horizontal"
+                            Margin="10,0,10,8"
+                        >
+                            <Button
+                                AutomationProperties.AutomationId="PrevMonth"
+                                Width="36"
+                                Height="36"
+                                Padding="0"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Click="PrevMonth_Click"
+                            >
+                                <Path
+                                    Data="M 6 0 L 0 6 L 6 12"
+                                    Width="8"
+                                    Height="12"
+                                    Stretch="Fill"
+                                    Stroke="{StaticResource AppMuted}"
+                                    StrokeThickness="1.6"
+                                    StrokeStartLineCap="Round"
+                                    StrokeEndLineCap="Round"
+                                />
+                            </Button>
+                            <TextBlock
+                                x:Name="MonthLabel"
+                                AutomationProperties.AutomationId="MonthLabel"
+                                VerticalAlignment="Center"
+                                Margin="12,0"
+                                MinWidth="200"
+                                TextAlignment="Center"
+                                Foreground="{StaticResource AppAccent}"
+                                FontWeight="SemiBold"
+                                FontSize="16"
+                            />
+                            <Button
+                                AutomationProperties.AutomationId="NextMonth"
+                                Width="36"
+                                Height="36"
+                                Padding="0"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Click="NextMonth_Click"
+                            >
+                                <Path
+                                    Data="M 0 0 L 6 6 L 0 12"
+                                    Width="8"
+                                    Height="12"
+                                    Stretch="Fill"
+                                    Stroke="{StaticResource AppMuted}"
+                                    StrokeThickness="1.6"
+                                    StrokeStartLineCap="Round"
+                                    StrokeEndLineCap="Round"
+                                />
+                            </Button>
+                            <Button
+                                Content="Добавить домашку"
+                                AutomationProperties.AutomationId="AddHomework"
+                                Height="36"
+                                Width="180"
+                                Margin="12,0,0,0"
+                                Click="AddHomework_Click"
+                                Style="{StaticResource AccentButton}"
+                            />
+                        </StackPanel>
+                        <Border
+                            x:Name="HomeworkFilterBar"
+                            DockPanel.Dock="Top"
+                            Visibility="Collapsed"
+                            Margin="10,0,10,8"
+                            Padding="12,8"
+                            CornerRadius="8"
+                            Background="{StaticResource AppSurface}"
+                            BorderBrush="{StaticResource AppBorder}"
+                            BorderThickness="1"
+                        >
+                            <DockPanel>
+                                <Button
+                                    x:Name="ClearHomeworkFilter"
+                                    DockPanel.Dock="Right"
+                                    Content="Сбросить"
+                                    AutomationProperties.AutomationId="ClearHomeworkFilter"
+                                    Height="32"
+                                    Width="110"
+                                    Click="ClearHomeworkFilter_Click"
+                                />
+                                <TextBlock
+                                    x:Name="HomeworkFilterLabel"
+                                    AutomationProperties.AutomationId="HomeworkFilterLabel"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource AppText}"
+                                    FontSize="15"
+                                />
+                            </DockPanel>
+                        </Border>
+                        <Border
+                            x:Name="OverdueBar"
+                            DockPanel.Dock="Top"
+                            Visibility="Collapsed"
+                            Margin="10,0,10,8"
+                            Padding="12,8"
+                            CornerRadius="8"
+                            Cursor="Hand"
+                            Background="{StaticResource AppSurface}"
+                            BorderBrush="{StaticResource AppWarning}"
+                            BorderThickness="1"
+                            MouseLeftButtonUp="OverdueBar_Click"
+                        >
+                            <TextBlock
+                                x:Name="OverdueLabel"
+                                AutomationProperties.AutomationId="OverdueLabel"
+                                VerticalAlignment="Center"
+                                Foreground="{StaticResource AppWarning}"
+                                FontSize="15"
+                            />
+                        </Border>
+                        <ScrollViewer
+                            x:Name="OverdueList"
+                            DockPanel.Dock="Top"
+                            Visibility="Collapsed"
+                            Margin="10,0,10,8"
+                            MaxHeight="168"
+                            VerticalScrollBarVisibility="Auto"
+                        >
+                            <ItemsControl x:Name="OverdueHost">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:HomeworkCardVm}">
+                                        <Border
+                                            Margin="0,0,0,4"
+                                            Padding="12,8"
+                                            CornerRadius="8"
+                                            Cursor="Hand"
+                                            Background="{StaticResource AppCard}"
+                                            BorderBrush="{StaticResource AppBorder}"
+                                            BorderThickness="1"
+                                            MouseLeftButtonUp="HomeworkCard_OnClick"
+                                        >
+                                            <DockPanel>
+                                                <TextBlock
+                                                    DockPanel.Dock="Right"
+                                                    Text="{Binding DeadlineText}"
+                                                    Margin="12,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{StaticResource AppWarning}"
+                                                    FontSize="14"
+                                                />
+                                                <StackPanel>
+                                                    <TextBlock
+                                                        Text="{Binding Subject}"
+                                                        FontSize="12"
+                                                        Foreground="{StaticResource AppMuted}"
+                                                        TextTrimming="CharacterEllipsis"
+                                                    />
+                                                    <TextBlock
+                                                        Text="{Binding Title}"
+                                                        FontSize="15"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{StaticResource AppText}"
+                                                        TextTrimming="CharacterEllipsis"
+                                                    />
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <Border.ContextMenu>
+                                                <ContextMenu Opened="HomeworkMenu_Opened">
+                                                    <MenuItem
+                                                        Header="Сделано"
+                                                        Tag="done"
+                                                        Click="MarkHomeworkDone_Click"
+                                                    />
+                                                    <MenuItem
+                                                        Header="Не сделано"
+                                                        Tag="undo"
+                                                        Click="MarkHomeworkDone_Click"
+                                                    />
+                                                    <MenuItem
+                                                        Header="Изменить"
+                                                        Click="EditHomeworkMenu_Click"
+                                                    />
+                                                    <MenuItem
+                                                        Header="Удалить"
+                                                        Click="DeleteHomeworkMenu_Click"
+                                                    />
+                                                    <MenuItem
+                                                        Header="К неделе"
+                                                        Click="HomeworkWeekMenu_Click"
+                                                    />
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock
+                            x:Name="HomeworkEmptyLabel"
+                            DockPanel.Dock="Top"
+                            Visibility="Collapsed"
+                            Margin="14,0,14,8"
+                            Foreground="{StaticResource AppMuted}"
+                            FontSize="15"
+                            Text="{x:Static vm:HomeworkCalendar.EmptyMonthText}"
+                        />
+                        <DockPanel Margin="10,0,10,8">
+                            <UniformGrid DockPanel.Dock="Top" Columns="7" Margin="0,0,0,6">
+                                <TextBlock
+                                    Text="Пн"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontWeight="SemiBold"
+                                />
+                                <TextBlock
+                                    Text="Вт"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontWeight="SemiBold"
+                                />
+                                <TextBlock
+                                    Text="Ср"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontWeight="SemiBold"
+                                />
+                                <TextBlock
+                                    Text="Чт"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontWeight="SemiBold"
+                                />
+                                <TextBlock
+                                    Text="Пт"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontWeight="SemiBold"
+                                />
+                                <TextBlock
+                                    Text="Сб"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontWeight="SemiBold"
+                                />
+                                <TextBlock
+                                    Text="Вс"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{StaticResource AppMuted}"
+                                    FontWeight="SemiBold"
+                                />
+                            </UniformGrid>
+                            <ScrollViewer
+                                x:Name="MonthScroll"
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Disabled"
+                            >
+                                <ItemsControl
+                                    x:Name="MonthHost"
+                                    VerticalAlignment="Stretch"
+                                    MinHeight="{Binding ViewportHeight, ElementName=MonthScroll}"
+                                >
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="1" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter
+                                                Property="HorizontalAlignment"
+                                                Value="Stretch"
+                                            />
+                                            <Setter Property="VerticalAlignment" Value="Stretch" />
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:MonthWeekVm}">
+                                            <ItemsControl
+                                                ItemsSource="{Binding Days}"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch"
+                                            >
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid Columns="7" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemContainerStyle>
+                                                    <Style TargetType="ContentPresenter">
+                                                        <Setter
+                                                            Property="HorizontalAlignment"
+                                                            Value="Stretch"
+                                                        />
+                                                        <Setter
+                                                            Property="VerticalAlignment"
+                                                            Value="Stretch"
+                                                        />
+                                                    </Style>
+                                                </ItemsControl.ItemContainerStyle>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:MonthDayVm}">
+                                                        <Border
+                                                            Margin="2"
+                                                            Padding="6,6,4,6"
+                                                            CornerRadius="8"
+                                                            MinHeight="108"
+                                                            BorderThickness="1"
+                                                            HorizontalAlignment="Stretch"
+                                                            VerticalAlignment="Stretch"
+                                                            MouseLeftButtonUp="HomeworkDay_OnClick"
+                                                        >
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter
+                                                                        Property="Background"
+                                                                        Value="{StaticResource AppSurface}"
+                                                                    />
+                                                                    <Setter
+                                                                        Property="BorderBrush"
+                                                                        Value="{StaticResource AppBorder}"
+                                                                    />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger
+                                                                            Binding="{Binding IsEmpty}"
+                                                                            Value="True"
+                                                                        >
+                                                                            <Setter
+                                                                                Property="Cursor"
+                                                                                Value="Hand"
+                                                                            />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger
+                                                                            Binding="{Binding IsCurrentMonth}"
+                                                                            Value="False"
+                                                                        >
+                                                                            <Setter
+                                                                                Property="Background"
+                                                                                Value="Transparent"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="BorderBrush"
+                                                                                Value="Transparent"
+                                                                            />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger
+                                                                            Binding="{Binding IsToday}"
+                                                                            Value="True"
+                                                                        >
+                                                                            <Setter
+                                                                                Property="Background"
+                                                                                Value="{StaticResource AppToday}"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="BorderBrush"
+                                                                                Value="{StaticResource AppTodayBorder}"
+                                                                            />
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
                                                             <DockPanel>
-                                                                <Border DockPanel.Dock="Left" Width="3" CornerRadius="2" Margin="0,0,8,0"
-                                                                        Background="{Binding Accent, Converter={StaticResource HexBrushConverter}}"/>
-                                                                <StackPanel>
-                                                                    <TextBlock Text="{Binding TimeText}" FontSize="13"
-                                                                               Foreground="{StaticResource AppMuted}" Margin="0,0,0,4"/>
-                                                                    <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" FontSize="15"
-                                                                               TextWrapping="Wrap" Foreground="{StaticResource AppText}" Margin="0,0,0,4"/>
-                                                                    <TextBlock Text="{Binding Place}" Foreground="#D1D5DB" FontSize="14" Margin="0,0,0,3"/>
-                                                                    <TextBlock Text="{Binding Meta}" Foreground="{StaticResource AppMuted}"
-                                                                               FontSize="13" TextWrapping="Wrap" Margin="0,0,0,3"/>
-                                                                    <TextBlock Text="{Binding Badge}" Foreground="#C4B5FD" FontSize="13"/>
-                                                                    <ItemsControl ItemsSource="{Binding Links}">
-                                                                        <ItemsControl.ItemTemplate>
-                                                                            <DataTemplate>
-                                                                                <TextBlock Text="{Binding}" FontSize="13" Margin="0,2,0,0"
-                                                                                           Foreground="{StaticResource AppAccent}" Cursor="Hand"
-                                                                                           TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
-                                                                                           MouseLeftButtonUp="CardLink_OnClick"/>
-                                                                            </DataTemplate>
-                                                                        </ItemsControl.ItemTemplate>
-                                                                    </ItemsControl>
-                                                                    <ItemsControl ItemsSource="{Binding HomeworkLinks}">
-                                                                        <ItemsControl.ItemTemplate>
-                                                                            <DataTemplate DataType="{x:Type vm:HomeworkLinkVm}">
-                                                                                <TextBlock Text="{Binding Label}" FontSize="13" Margin="0,2,0,0"
-                                                                                           Foreground="{StaticResource AppAccent}" Cursor="Hand"
-                                                                                           TextWrapping="Wrap"
-                                                                                           MouseLeftButtonUp="LessonHomework_OnClick"/>
-                                                                            </DataTemplate>
-                                                                        </ItemsControl.ItemTemplate>
-                                                                    </ItemsControl>
-                                                                </StackPanel>
+                                                                <TextBlock
+                                                                    DockPanel.Dock="Top"
+                                                                    Text="{Binding DayNumber}"
+                                                                    FontWeight="SemiBold"
+                                                                    Margin="2,0,0,4"
+                                                                >
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter
+                                                                                Property="Foreground"
+                                                                                Value="{StaticResource AppText}"
+                                                                            />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger
+                                                                                    Binding="{Binding IsCurrentMonth}"
+                                                                                    Value="False"
+                                                                                >
+                                                                                    <Setter
+                                                                                        Property="Foreground"
+                                                                                        Value="{StaticResource AppMuted}"
+                                                                                    />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <ItemsControl
+                                                                    ItemsSource="{Binding Items}"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    VerticalAlignment="Top"
+                                                                >
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate>
+                                                                            <StackPanel />
+                                                                        </ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                    <ItemsControl.ItemContainerStyle>
+                                                                        <Style TargetType="ContentPresenter">
+                                                                            <Setter
+                                                                                Property="HorizontalAlignment"
+                                                                                Value="Stretch"
+                                                                            />
+                                                                            <Setter
+                                                                                Property="VerticalAlignment"
+                                                                                Value="Top"
+                                                                            />
+                                                                        </Style>
+                                                                    </ItemsControl.ItemContainerStyle>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate DataType="{x:Type vm:HomeworkCardVm}">
+                                                                            <Border
+                                                                                Margin="0,0,4,6"
+                                                                                Padding="12,10"
+                                                                                CornerRadius="10"
+                                                                                Cursor="Hand"
+                                                                                HorizontalAlignment="Stretch"
+                                                                                VerticalAlignment="Top"
+                                                                                MouseLeftButtonUp="HomeworkCard_OnClick"
+                                                                                Opacity="{Binding IsDone, Converter={StaticResource DimConverter}}"
+                                                                            >
+                                                                                <Border.Style>
+                                                                                    <Style TargetType="Border">
+                                                                                        <Setter
+                                                                                            Property="Background"
+                                                                                            Value="{StaticResource AppCard}"
+                                                                                        />
+                                                                                        <Setter
+                                                                                            Property="BorderBrush"
+                                                                                            Value="Transparent"
+                                                                                        />
+                                                                                        <Setter
+                                                                                            Property="BorderThickness"
+                                                                                            Value="1"
+                                                                                        />
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger
+                                                                                                Binding="{Binding IsOverdue}"
+                                                                                                Value="True"
+                                                                                            >
+                                                                                                <Setter
+                                                                                                    Property="BorderBrush"
+                                                                                                    Value="{StaticResource AppWarning}"
+                                                                                                />
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </Border.Style>
+                                                                                <DockPanel>
+                                                                                    <Border
+                                                                                        DockPanel.Dock="Left"
+                                                                                        Width="4"
+                                                                                        CornerRadius="2"
+                                                                                        Margin="0,0,10,0"
+                                                                                        Background="{Binding Accent, Converter={StaticResource HexBrushConverter}}"
+                                                                                    />
+                                                                                    <StackPanel>
+                                                                                        <TextBlock
+                                                                                            Text="{Binding Subject}"
+                                                                                            FontSize="13"
+                                                                                            Foreground="{StaticResource AppMuted}"
+                                                                                            TextWrapping="Wrap"
+                                                                                        />
+                                                                                        <TextBlock
+                                                                                            Text="{Binding Title}"
+                                                                                            FontWeight="SemiBold"
+                                                                                            FontSize="16"
+                                                                                            Margin="0,4,0,0"
+                                                                                            TextWrapping="Wrap"
+                                                                                            Foreground="{StaticResource AppText}"
+                                                                                        />
+                                                                                        <TextBlock
+                                                                                            Text="{x:Static vm:HomeworkCalendar.OverdueMark}"
+                                                                                            FontSize="12"
+                                                                                            Margin="0,4,0,0"
+                                                                                            Foreground="{StaticResource AppWarning}"
+                                                                                        >
+                                                                                            <TextBlock.Style>
+                                                                                                <Style TargetType="TextBlock">
+                                                                                                    <Setter
+                                                                                                        Property="Visibility"
+                                                                                                        Value="Collapsed"
+                                                                                                    />
+                                                                                                    <Style.Triggers>
+                                                                                                        <DataTrigger
+                                                                                                            Binding="{Binding IsOverdue}"
+                                                                                                            Value="True"
+                                                                                                        >
+                                                                                                            <Setter
+                                                                                                                Property="Visibility"
+                                                                                                                Value="Visible"
+                                                                                                            />
+                                                                                                        </DataTrigger>
+                                                                                                    </Style.Triggers>
+                                                                                                </Style>
+                                                                                            </TextBlock.Style>
+                                                                                        </TextBlock>
+                                                                                        <TextBlock
+                                                                                            Text="{Binding Description}"
+                                                                                            FontSize="13"
+                                                                                            Foreground="{StaticResource AppMuted}"
+                                                                                            TextTrimming="CharacterEllipsis"
+                                                                                            TextWrapping="NoWrap"
+                                                                                        >
+                                                                                            <TextBlock.Style>
+                                                                                                <Style TargetType="TextBlock">
+                                                                                                    <Setter
+                                                                                                        Property="Margin"
+                                                                                                        Value="0,4,0,0"
+                                                                                                    />
+                                                                                                    <Style.Triggers>
+                                                                                                        <DataTrigger
+                                                                                                            Binding="{Binding Description}"
+                                                                                                            Value=""
+                                                                                                        >
+                                                                                                            <Setter
+                                                                                                                Property="Visibility"
+                                                                                                                Value="Collapsed"
+                                                                                                            />
+                                                                                                            <Setter
+                                                                                                                Property="Margin"
+                                                                                                                Value="0"
+                                                                                                            />
+                                                                                                        </DataTrigger>
+                                                                                                    </Style.Triggers>
+                                                                                                </Style>
+                                                                                            </TextBlock.Style>
+                                                                                        </TextBlock>
+                                                                                        <ItemsControl ItemsSource="{Binding Links}">
+                                                                                            <ItemsControl.ItemTemplate>
+                                                                                                <DataTemplate>
+                                                                                                    <TextBlock
+                                                                                                        Text="{Binding}"
+                                                                                                        FontSize="13"
+                                                                                                        Margin="0,8,0,0"
+                                                                                                        Cursor="Hand"
+                                                                                                        Foreground="{StaticResource AppAccent}"
+                                                                                                        TextTrimming="CharacterEllipsis"
+                                                                                                        TextWrapping="NoWrap"
+                                                                                                        MouseLeftButtonUp="CardLink_OnClick"
+                                                                                                    />
+                                                                                                </DataTemplate>
+                                                                                            </ItemsControl.ItemTemplate>
+                                                                                        </ItemsControl>
+                                                                                    </StackPanel>
+                                                                                </DockPanel>
+                                                                                <Border.ContextMenu>
+                                                                                    <ContextMenu Opened="HomeworkMenu_Opened">
+                                                                                        <MenuItem
+                                                                                            Header="Сделано"
+                                                                                            Tag="done"
+                                                                                            Click="MarkHomeworkDone_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="Не сделано"
+                                                                                            Tag="undo"
+                                                                                            Click="MarkHomeworkDone_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="Изменить"
+                                                                                            Click="EditHomeworkMenu_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="Удалить"
+                                                                                            Click="DeleteHomeworkMenu_Click"
+                                                                                        />
+                                                                                        <MenuItem
+                                                                                            Header="К неделе"
+                                                                                            Click="HomeworkWeekMenu_Click"
+                                                                                        />
+                                                                                    </ContextMenu>
+                                                                                </Border.ContextMenu>
+                                                                            </Border>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
                                                             </DockPanel>
-                                                            <Border.ContextMenu>
-                                                                <ContextMenu>
-                                                                    <MenuItem Header="Изменить" Click="EditMenu_Click"/>
-                                                                    <MenuItem Header="Удалить" Click="DeleteMenu_Click"/>
-                                                                    <MenuItem Header="Открыть ссылку" Click="OpenLinkMenu_Click"/>
-                                                                    <MenuItem Header="Домашки пары" Click="HomeworkOfLesson_Click"/>
-                                                                    <MenuItem Header="Добавить домашку" Click="AddHomeworkForLesson_Click"/>
-                                                                </ContextMenu>
-                                                            </Border.ContextMenu>
                                                         </Border>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                        </ScrollViewer>
-                                    </DockPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </DockPanel>
-            </TabItem>
-
-            <TabItem x:Name="HomeworkTab" AutomationProperties.AutomationId="HomeworkTab">
-                <TabItem.Header>
-                    <TextBlock Text="Домашки" Padding="0,0,2,0"/>
-                </TabItem.Header>
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,10,8">
-                        <Button AutomationProperties.AutomationId="PrevMonth" Width="36" Height="36" Padding="0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="PrevMonth_Click">
-                            <Path Data="M 6 0 L 0 6 L 6 12" Width="8" Height="12" Stretch="Fill"
-                                  Stroke="{StaticResource AppMuted}" StrokeThickness="1.6"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                        </Button>
-                        <TextBlock x:Name="MonthLabel" AutomationProperties.AutomationId="MonthLabel" VerticalAlignment="Center"
-                                   Margin="12,0" MinWidth="200" TextAlignment="Center"
-                                   Foreground="{StaticResource AppAccent}" FontWeight="SemiBold" FontSize="16"/>
-                        <Button AutomationProperties.AutomationId="NextMonth" Width="36" Height="36" Padding="0"
-                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="NextMonth_Click">
-                            <Path Data="M 0 0 L 6 6 L 0 12" Width="8" Height="12" Stretch="Fill"
-                                  Stroke="{StaticResource AppMuted}" StrokeThickness="1.6"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                        </Button>
-                        <Button Content="Добавить домашку" AutomationProperties.AutomationId="AddHomework" Height="36" Width="180"
-                                Margin="12,0,0,0" Click="AddHomework_Click" Style="{StaticResource AccentButton}"/>
-                    </StackPanel>
-                    <Border x:Name="HomeworkFilterBar" DockPanel.Dock="Top" Visibility="Collapsed"
-                            Margin="10,0,10,8" Padding="12,8" CornerRadius="8"
-                            Background="{StaticResource AppSurface}" BorderBrush="{StaticResource AppBorder}" BorderThickness="1">
-                        <DockPanel>
-                            <Button x:Name="ClearHomeworkFilter" DockPanel.Dock="Right" Content="Сбросить"
-                                    AutomationProperties.AutomationId="ClearHomeworkFilter" Height="32" Width="110"
-                                    Click="ClearHomeworkFilter_Click"/>
-                            <TextBlock x:Name="HomeworkFilterLabel" AutomationProperties.AutomationId="HomeworkFilterLabel"
-                                       VerticalAlignment="Center" Foreground="{StaticResource AppText}" FontSize="15"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
                         </DockPanel>
-                    </Border>
-                    <TextBlock x:Name="HomeworkEmptyLabel" DockPanel.Dock="Top" Visibility="Collapsed"
-                               Margin="14,0,14,8" Foreground="{StaticResource AppMuted}" FontSize="15"
-                               Text="{x:Static vm:HomeworkCalendar.EmptyMonthText}"/>
-                    <DockPanel Margin="10,0,10,8">
-                        <UniformGrid DockPanel.Dock="Top" Columns="7" Margin="0,0,0,6">
-                            <TextBlock Text="Пн" HorizontalAlignment="Center" Foreground="{StaticResource AppMuted}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Вт" HorizontalAlignment="Center" Foreground="{StaticResource AppMuted}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Ср" HorizontalAlignment="Center" Foreground="{StaticResource AppMuted}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Чт" HorizontalAlignment="Center" Foreground="{StaticResource AppMuted}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Пт" HorizontalAlignment="Center" Foreground="{StaticResource AppMuted}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Сб" HorizontalAlignment="Center" Foreground="{StaticResource AppMuted}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Вс" HorizontalAlignment="Center" Foreground="{StaticResource AppMuted}" FontWeight="SemiBold"/>
-                        </UniformGrid>
-                        <ScrollViewer x:Name="MonthScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl x:Name="MonthHost" VerticalAlignment="Stretch"
-                                          MinHeight="{Binding ViewportHeight, ElementName=MonthScroll}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="1"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemContainerStyle>
-                                    <Style TargetType="ContentPresenter">
-                                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                        <Setter Property="VerticalAlignment" Value="Stretch"/>
-                                    </Style>
-                                </ItemsControl.ItemContainerStyle>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type vm:MonthWeekVm}">
-                                        <ItemsControl ItemsSource="{Binding Days}"
-                                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <UniformGrid Columns="7"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemContainerStyle>
-                                                <Style TargetType="ContentPresenter">
-                                                    <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                                    <Setter Property="VerticalAlignment" Value="Stretch"/>
-                                                </Style>
-                                            </ItemsControl.ItemContainerStyle>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type vm:MonthDayVm}">
-                                                    <Border Margin="2" Padding="6,6,4,6" CornerRadius="8" MinHeight="108" BorderThickness="1"
-                                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                                            MouseLeftButtonUp="HomeworkDay_OnClick">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="Background" Value="{StaticResource AppSurface}"/>
-                                                                <Setter Property="BorderBrush" Value="{StaticResource AppBorder}"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                                                                        <Setter Property="Cursor" Value="Hand"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding IsCurrentMonth}" Value="False">
-                                                                        <Setter Property="Background" Value="Transparent"/>
-                                                                        <Setter Property="BorderBrush" Value="Transparent"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                                        <Setter Property="Background" Value="{StaticResource AppToday}"/>
-                                                                        <Setter Property="BorderBrush" Value="{StaticResource AppTodayBorder}"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                        <DockPanel>
-                                                            <TextBlock DockPanel.Dock="Top" Text="{Binding DayNumber}" FontWeight="SemiBold"
-                                                                       Margin="2,0,0,4">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="{StaticResource AppText}"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsCurrentMonth}" Value="False">
-                                                                                <Setter Property="Foreground" Value="{StaticResource AppMuted}"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                            <ItemsControl ItemsSource="{Binding Items}" HorizontalContentAlignment="Stretch"
-                                                                          VerticalAlignment="Stretch">
-                                                                <ItemsControl.ItemsPanel>
-                                                                    <ItemsPanelTemplate>
-                                                                        <UniformGrid Columns="1"/>
-                                                                    </ItemsPanelTemplate>
-                                                                </ItemsControl.ItemsPanel>
-                                                                <ItemsControl.ItemContainerStyle>
-                                                                    <Style TargetType="ContentPresenter">
-                                                                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                                                        <Setter Property="VerticalAlignment" Value="Stretch"/>
-                                                                    </Style>
-                                                                </ItemsControl.ItemContainerStyle>
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate DataType="{x:Type vm:HomeworkCardVm}">
-                                                                        <Border Margin="0,0,2,4" Padding="6,4" CornerRadius="6" Cursor="Hand"
-                                                                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                                                                Background="{StaticResource AppCard}"
-                                                                                MouseLeftButtonUp="HomeworkCard_OnClick"
-                                                                                Opacity="{Binding IsDone, Converter={StaticResource DimConverter}}">
-                                                                            <DockPanel>
-                                                                                <Border DockPanel.Dock="Left" Width="3" CornerRadius="2" Margin="0,0,6,0"
-                                                                                        Background="{Binding Accent, Converter={StaticResource HexBrushConverter}}"/>
-                                                                                <StackPanel>
-                                                                                    <TextBlock Text="{Binding Subject}" FontSize="11"
-                                                                                               Foreground="{StaticResource AppMuted}" TextTrimming="CharacterEllipsis"/>
-                                                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13"
-                                                                                               TextWrapping="Wrap" Foreground="{StaticResource AppText}"/>
-                                                                                    <TextBlock Text="{Binding Description}" FontSize="12"
-                                                                                               Foreground="{StaticResource AppMuted}"
-                                                                                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap">
-                                                                                        <TextBlock.Style>
-                                                                                            <Style TargetType="TextBlock">
-                                                                                                <Setter Property="Margin" Value="0,2,0,0"/>
-                                                                                                <Style.Triggers>
-                                                                                                    <DataTrigger Binding="{Binding Description}" Value="">
-                                                                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                                                                    </DataTrigger>
-                                                                                                </Style.Triggers>
-                                                                                            </Style>
-                                                                                        </TextBlock.Style>
-                                                                                    </TextBlock>
-                                                                                    <ItemsControl ItemsSource="{Binding Links}" HorizontalContentAlignment="Stretch">
-                                                                                        <ItemsControl.ItemContainerStyle>
-                                                                                            <Style TargetType="ContentPresenter">
-                                                                                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                                                                            </Style>
-                                                                                        </ItemsControl.ItemContainerStyle>
-                                                                                        <ItemsControl.ItemTemplate>
-                                                                                            <DataTemplate>
-                                                                                                <TextBlock Text="{Binding}" FontSize="12" Margin="0,1,0,0"
-                                                                                                           HorizontalAlignment="Stretch" Cursor="Hand"
-                                                                                                           Foreground="{StaticResource AppAccent}"
-                                                                                                           TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
-                                                                                                           MouseLeftButtonUp="CardLink_OnClick"/>
-                                                                                            </DataTemplate>
-                                                                                        </ItemsControl.ItemTemplate>
-                                                                                    </ItemsControl>
-                                                                                </StackPanel>
-                                                                            </DockPanel>
-                                                                            <Border.ContextMenu>
-                                                                                <ContextMenu>
-                                                                                    <MenuItem Header="Изменить" Click="EditHomeworkMenu_Click"/>
-                                                                                    <MenuItem Header="Удалить" Click="DeleteHomeworkMenu_Click"/>
-                                                                                    <MenuItem Header="К неделе" Click="HomeworkWeekMenu_Click"/>
-                                                                                </ContextMenu>
-                                                                            </Border.ContextMenu>
-                                                                        </Border>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
-                                                        </DockPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
                     </DockPanel>
-                </DockPanel>
-            </TabItem>
-        </TabControl>
-    </DockPanel>
-        <Border x:Name="EditorPanel" Width="560" HorizontalAlignment="Right" Visibility="Collapsed"
-                Background="{StaticResource AppSurface}"
-                BorderBrush="{StaticResource AppBorder}" BorderThickness="1,0,0,0"
-                Panel.ZIndex="2">
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+        <Border
+            x:Name="EditorPanel"
+            Width="440"
+            HorizontalAlignment="Right"
+            Visibility="Collapsed"
+            Background="{StaticResource AppSurface}"
+            BorderBrush="{StaticResource AppBorder}"
+            BorderThickness="1,0,0,0"
+            Panel.ZIndex="2"
+        >
             <Border.RenderTransform>
-                <TranslateTransform x:Name="EditorShift" X="560"/>
+                <TranslateTransform x:Name="EditorShift" X="440" />
             </Border.RenderTransform>
-            <DockPanel>
-                <Grid DockPanel.Dock="Top" Margin="20,16,16,0">
-                    <TextBlock x:Name="EditorTitle" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"
-                               Foreground="{StaticResource AppText}"/>
-                    <Button Width="36" Height="36" Padding="0" HorizontalAlignment="Right"
-                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                            AutomationProperties.AutomationId="CloseEditor" Click="CloseEditor_Click">
-                        <Path Data="M 0 0 L 10 10 M 10 0 L 0 10" Width="10" Height="10" Stretch="None"
-                              Stroke="{StaticResource AppText}" StrokeThickness="1.6"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Button>
-                </Grid>
-                <ContentControl x:Name="EditorHost"/>
-            </DockPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border
+                    Grid.Column="0"
+                    Background="Transparent"
+                    Cursor="SizeWE"
+                    MouseLeftButtonDown="EditorResize_OnMouseDown"
+                    MouseMove="EditorResize_OnMouseMove"
+                    MouseLeftButtonUp="EditorResize_OnMouseUp"
+                />
+                <DockPanel Grid.Column="1">
+                    <Grid DockPanel.Dock="Top" Margin="20,16,16,0">
+                        <TextBlock
+                            x:Name="EditorTitle"
+                            FontSize="20"
+                            FontWeight="SemiBold"
+                            VerticalAlignment="Center"
+                            Foreground="{StaticResource AppText}"
+                        />
+                        <Button
+                            Width="36"
+                            Height="36"
+                            Padding="0"
+                            HorizontalAlignment="Right"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            AutomationProperties.AutomationId="CloseEditor"
+                            Click="CloseEditor_Click"
+                        >
+                            <Path
+                                Data="M 0 0 L 10 10 M 10 0 L 0 10"
+                                Width="10"
+                                Height="10"
+                                Stretch="None"
+                                Stroke="{StaticResource AppText}"
+                                StrokeThickness="1.6"
+                                StrokeStartLineCap="Round"
+                                StrokeEndLineCap="Round"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                            />
+                        </Button>
+                    </Grid>
+                    <ContentControl x:Name="EditorHost" />
+                </DockPanel>
+            </Grid>
         </Border>
-        <Grid x:Name="ImportPanel" Visibility="Collapsed" Panel.ZIndex="3" Background="#B0121418"
-              AutomationProperties.AutomationId="ImportPanel">
-            <Border Width="420" Padding="24" CornerRadius="12"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="{StaticResource AppSurface}"
-                    BorderBrush="{StaticResource AppBorder}" BorderThickness="1">
+        <Grid
+            x:Name="ImportPanel"
+            Visibility="Collapsed"
+            Panel.ZIndex="3"
+            Background="#B00A0A0A"
+            AutomationProperties.AutomationId="ImportPanel"
+        >
+            <Border
+                Width="420"
+                Padding="24"
+                CornerRadius="12"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource AppSurface}"
+                BorderBrush="{StaticResource AppBorder}"
+                BorderThickness="1"
+            >
                 <StackPanel>
-                    <TextBlock Text="Импорт" FontSize="20" FontWeight="SemiBold"
-                               Foreground="{StaticResource AppText}"/>
-                    <TextBlock x:Name="ImportStatus" Margin="0,12,0,16" FontSize="16" TextWrapping="Wrap"
-                               Foreground="{StaticResource AppMuted}"
-                               AutomationProperties.AutomationId="ImportStatus"/>
-                    <ProgressBar Height="6" IsIndeterminate="True" BorderThickness="0"
-                                 Foreground="{StaticResource AppAccent}" Background="{StaticResource AppCard}"/>
+                    <TextBlock
+                        Text="Импорт"
+                        FontSize="20"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource AppText}"
+                    />
+                    <TextBlock
+                        x:Name="ImportStatus"
+                        Margin="0,12,0,16"
+                        FontSize="16"
+                        TextWrapping="Wrap"
+                        Foreground="{StaticResource AppMuted}"
+                        AutomationProperties.AutomationId="ImportStatus"
+                    />
+                    <ProgressBar
+                        Height="6"
+                        IsIndeterminate="True"
+                        BorderThickness="0"
+                        Foreground="{StaticResource AppAccent}"
+                        Background="{StaticResource AppCard}"
+                    />
                 </StackPanel>
             </Border>
         </Grid>

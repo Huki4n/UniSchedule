@@ -10,8 +10,7 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             SELECT h.Id, h.LessonId, h.Title, h.Description, h.Deadline, h.IsDone, h.Url, h.ExtraUrl
             FROM Homework h
             INNER JOIN Lessons l ON l.Id = h.LessonId
@@ -22,6 +21,24 @@ public sealed partial class AppDatabase
         return ReadHomework(cmd);
     }
 
+    public Homework? FindHomework(long id)
+    {
+        if (id <= 0)
+        {
+            return null;
+        }
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT Id, LessonId, Title, Description, Deadline, IsDone, Url, ExtraUrl
+            FROM Homework
+            WHERE Id=$id
+            """;
+        cmd.Parameters.AddWithValue("$id", id);
+        return ReadHomework(cmd).FirstOrDefault();
+    }
+
     public int CountHomework(long lessonId)
     {
         using var db = Open();
@@ -29,6 +46,21 @@ public sealed partial class AppDatabase
         cmd.CommandText = "SELECT COUNT(*) FROM Homework WHERE LessonId=$id";
         cmd.Parameters.AddWithValue("$id", lessonId);
         return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    public void SetHomeworkDone(long id, bool done)
+    {
+        if (id <= 0)
+        {
+            return;
+        }
+
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "UPDATE Homework SET IsDone=$done WHERE Id=$id";
+        cmd.Parameters.AddWithValue("$done", done ? 1 : 0);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
     }
 
     public long UpsertHomework(Homework homework)
@@ -41,7 +73,8 @@ public sealed partial class AppDatabase
     public long SaveHomeworkWithComments(
         Homework homework,
         IReadOnlyList<long> removedCommentIds,
-        IReadOnlyList<HomeworkComment> addedComments)
+        IReadOnlyList<HomeworkComment> addedComments
+    )
     {
         using var db = Open();
         using var tx = db.BeginTransaction();
@@ -76,8 +109,7 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             SELECT Id, HomeworkId, Body, CreatedAt
             FROM HomeworkComment
             WHERE HomeworkId=$id
@@ -88,13 +120,19 @@ public sealed partial class AppDatabase
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            list.Add(new HomeworkComment
-            {
-                Id = reader.GetInt64(0),
-                HomeworkId = reader.GetInt64(1),
-                Body = reader.GetString(2),
-                CreatedAt = DateTime.ParseExact(reader.GetString(3), "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
-            });
+            list.Add(
+                new HomeworkComment
+                {
+                    Id = reader.GetInt64(0),
+                    HomeworkId = reader.GetInt64(1),
+                    Body = reader.GetString(2),
+                    CreatedAt = DateTime.ParseExact(
+                        reader.GetString(3),
+                        "yyyy-MM-dd HH:mm",
+                        CultureInfo.InvariantCulture
+                    ),
+                }
+            );
         }
 
         return list;
@@ -117,8 +155,7 @@ public sealed partial class AppDatabase
         using var cmd = db.CreateCommand();
         if (homework.Id > 0)
         {
-            cmd.CommandText =
-                """
+            cmd.CommandText = """
                 UPDATE Homework SET
                     LessonId=$lesson, Title=$title, Description=$description,
                     Deadline=$deadline, IsDone=$done, Url=$url, ExtraUrl=$extra
@@ -128,8 +165,7 @@ public sealed partial class AppDatabase
         }
         else
         {
-            cmd.CommandText =
-                """
+            cmd.CommandText = """
                 INSERT INTO Homework (LessonId, Title, Description, Deadline, IsDone, Url, ExtraUrl)
                 VALUES ($lesson, $title, $description, $deadline, $done, $url, $extra);
                 SELECT last_insert_rowid();
@@ -144,7 +180,12 @@ public sealed partial class AppDatabase
         }
     }
 
-    private static void AddHomeworkComment(SqliteConnection db, long homeworkId, string body, DateTime createdAt)
+    private static void AddHomeworkComment(
+        SqliteConnection db,
+        long homeworkId,
+        string body,
+        DateTime createdAt
+    )
     {
         var text = body.Trim();
         if (homeworkId <= 0 || text.Length == 0)
@@ -153,14 +194,16 @@ public sealed partial class AppDatabase
         }
 
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             INSERT INTO HomeworkComment (HomeworkId, Body, CreatedAt)
             VALUES ($homework, $body, $at)
             """;
         cmd.Parameters.AddWithValue("$homework", homeworkId);
         cmd.Parameters.AddWithValue("$body", text);
-        cmd.Parameters.AddWithValue("$at", createdAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue(
+            "$at",
+            createdAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+        );
         cmd.ExecuteNonQuery();
     }
 
@@ -183,8 +226,7 @@ public sealed partial class AppDatabase
     private static void DeleteCommentsForLesson(SqliteConnection db, long lessonId)
     {
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             DELETE FROM HomeworkComment
             WHERE HomeworkId IN (SELECT Id FROM Homework WHERE LessonId=$id)
             """;
@@ -192,7 +234,10 @@ public sealed partial class AppDatabase
         cmd.ExecuteNonQuery();
     }
 
-    private static List<(long HomeworkId, long LessonId)> ReadHomeworkLinks(SqliteConnection db, IReadOnlyCollection<long> lessonIds)
+    private static List<(long HomeworkId, long LessonId)> ReadHomeworkLinks(
+        SqliteConnection db,
+        IReadOnlyCollection<long> lessonIds
+    )
     {
         var links = new List<(long, long)>();
         if (lessonIds.Count == 0)
@@ -221,17 +266,23 @@ public sealed partial class AppDatabase
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            list.Add(new Homework
-            {
-                Id = reader.GetInt64(0),
-                LessonId = reader.GetInt64(1),
-                Title = reader.GetString(2),
-                Description = reader.GetString(3),
-                Deadline = DateTime.ParseExact(reader.GetString(4), "yyyy-MM-dd", CultureInfo.InvariantCulture),
-                IsDone = reader.GetInt32(5) != 0,
-                Url = reader.GetString(6),
-                ExtraUrl = reader.GetString(7)
-            });
+            list.Add(
+                new Homework
+                {
+                    Id = reader.GetInt64(0),
+                    LessonId = reader.GetInt64(1),
+                    Title = reader.GetString(2),
+                    Description = reader.GetString(3),
+                    Deadline = DateTime.ParseExact(
+                        reader.GetString(4),
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture
+                    ),
+                    IsDone = reader.GetInt32(5) != 0,
+                    Url = reader.GetString(6),
+                    ExtraUrl = reader.GetString(7),
+                }
+            );
         }
 
         return list;
@@ -242,7 +293,10 @@ public sealed partial class AppDatabase
         cmd.Parameters.AddWithValue("$lesson", homework.LessonId);
         cmd.Parameters.AddWithValue("$title", homework.Title.Trim());
         cmd.Parameters.AddWithValue("$description", homework.Description.Trim());
-        cmd.Parameters.AddWithValue("$deadline", homework.Deadline.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue(
+            "$deadline",
+            homework.Deadline.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+        );
         cmd.Parameters.AddWithValue("$done", homework.IsDone ? 1 : 0);
         cmd.Parameters.AddWithValue("$url", homework.Url.Trim());
         cmd.Parameters.AddWithValue("$extra", homework.ExtraUrl.Trim());

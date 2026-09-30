@@ -19,14 +19,36 @@ public class LessonSeriesTests
         var lessons = new List<Lesson> { monday, laterMonday, friday, other };
 
         Assert.True(LessonSeries.HasOthers(lessons, monday));
-        Assert.Equal([2, 3], LessonSeries.Select(lessons, monday, LessonEditScope.All).Select(item => item.Id).ToArray());
-        Assert.Equal([2, 3], LessonSeries.Select(lessons, monday, LessonEditScope.ThisAndFollowing).Select(item => item.Id).ToArray());
-        Assert.Equal([3], LessonSeries.Select(lessons, laterMonday, LessonEditScope.ThisAndFollowing).Select(item => item.Id).ToArray());
+        Assert.Equal(
+            [2, 3],
+            LessonSeries
+                .Select(lessons, monday, LessonEditScope.All)
+                .Select(item => item.Id)
+                .ToArray()
+        );
+        Assert.Equal(
+            [2, 3],
+            LessonSeries
+                .Select(lessons, monday, LessonEditScope.ThisAndFollowing)
+                .Select(item => item.Id)
+                .ToArray()
+        );
+        Assert.Equal(
+            [3],
+            LessonSeries
+                .Select(lessons, laterMonday, LessonEditScope.ThisAndFollowing)
+                .Select(item => item.Id)
+                .ToArray()
+        );
         Assert.Empty(LessonSeries.Select(lessons, monday, LessonEditScope.OnlyThis));
         // After a sibling is deleted from the board, Select must not keep its id.
         Assert.Equal(
             [3],
-            LessonSeries.Select([monday, friday, other], monday, LessonEditScope.All).Select(item => item.Id).ToArray());
+            LessonSeries
+                .Select([monday, friday, other], monday, LessonEditScope.All)
+                .Select(item => item.Id)
+                .ToArray()
+        );
 
         monday.Teacher = "Иванов";
         monday.Subject = "Сети и связь";
@@ -39,12 +61,13 @@ public class LessonSeriesTests
         Assert.Equal("Базы", other.Subject);
     }
 
-    private static Lesson Lesson(string subject, DayOfWeek day, int hour, int minute) => new()
-    {
-        GroupCode = "11-321",
-        Subject = subject,
-        DayOfWeek = day,
-        Start = new TimeSpan(hour, minute, 0),
-        End = new TimeSpan(hour + 1, minute, 0)
-    };
+    private static Lesson Lesson(string subject, DayOfWeek day, int hour, int minute) =>
+        new()
+        {
+            GroupCode = "11-321",
+            Subject = subject,
+            DayOfWeek = day,
+            Start = new TimeSpan(hour, minute, 0),
+            End = new TimeSpan(hour + 1, minute, 0),
+        };
 }

@@ -31,20 +31,33 @@ public class AcademicCalendarTests
             DayOfWeek = DayOfWeek.Tuesday,
             Parity = WeekParity.Odd,
             WeekFrom = 1,
-            WeekTo = 1
+            WeekTo = 1,
         };
 
         Assert.True(AcademicCalendar.AppliesThisWeek(lesson, SemesterStart, SemesterStart));
-        Assert.False(AcademicCalendar.AppliesThisWeek(lesson, new DateTime(2026, 9, 8), SemesterStart));
-        Assert.False(AcademicCalendar.AppliesOnDate(lesson, new DateTime(2026, 9, 2), SemesterStart));
+        Assert.False(
+            AcademicCalendar.AppliesThisWeek(lesson, new DateTime(2026, 9, 8), SemesterStart)
+        );
+        Assert.False(
+            AcademicCalendar.AppliesOnDate(lesson, new DateTime(2026, 9, 2), SemesterStart)
+        );
     }
 
     [Fact]
     public void StartOfWeek_LandsOnMonday_IncludingSunday()
     {
-        Assert.Equal(new DateTime(2026, 8, 31), AcademicCalendar.StartOfWeek(new DateTime(2026, 9, 4)));
-        Assert.Equal(new DateTime(2026, 8, 31), AcademicCalendar.StartOfWeek(new DateTime(2026, 9, 6)));
-        Assert.Equal(new DateTime(2026, 9, 7), AcademicCalendar.StartOfWeek(new DateTime(2026, 9, 7)));
+        Assert.Equal(
+            new DateTime(2026, 8, 31),
+            AcademicCalendar.StartOfWeek(new DateTime(2026, 9, 4))
+        );
+        Assert.Equal(
+            new DateTime(2026, 8, 31),
+            AcademicCalendar.StartOfWeek(new DateTime(2026, 9, 6))
+        );
+        Assert.Equal(
+            new DateTime(2026, 9, 7),
+            AcademicCalendar.StartOfWeek(new DateTime(2026, 9, 7))
+        );
         Assert.Equal("Пятница, 4 сент.", AcademicCalendar.ColumnTitle(new DateTime(2026, 9, 4)));
         Assert.Equal("Сентябрь 2026", AcademicCalendar.MonthTitle(new DateTime(2026, 9, 4)));
     }
@@ -52,7 +65,10 @@ public class AcademicCalendarTests
     [Fact]
     public void Labels_UseRussianNames()
     {
-        Assert.Equal("Неделя 1 · нечётная", AcademicCalendar.WeekLabel(SemesterStart, SemesterStart));
+        Assert.Equal(
+            "Неделя 1 · нечётная",
+            AcademicCalendar.WeekLabel(SemesterStart, SemesterStart)
+        );
         Assert.Equal("Понедельник", AcademicCalendar.DayName(DayOfWeek.Monday));
         Assert.Equal("Лекция", AcademicCalendar.TypeLabel(LessonCodes.Lecture));
         Assert.Equal("Зачет", AcademicCalendar.TypeLabel(LessonCodes.Credit));

@@ -7,13 +7,16 @@ public static class MeetingLinks
 {
     private static readonly Regex CallHostRegex = new(
         @"telemost|mts-link|mtslink|meet\.google|ktalk|teleboss|zoom\.|t\.me/|clck\.ru",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
 
     public static bool TryGetWebUri(string? url, out Uri uri)
     {
-        if (!string.IsNullOrWhiteSpace(url) &&
-            Uri.TryCreate(url.Trim(), UriKind.Absolute, out var parsed) &&
-            (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps))
+        if (
+            !string.IsNullOrWhiteSpace(url)
+            && Uri.TryCreate(url.Trim(), UriKind.Absolute, out var parsed)
+            && (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)
+        )
         {
             uri = parsed;
             return true;
@@ -27,13 +30,16 @@ public static class MeetingLinks
         !string.IsNullOrWhiteSpace(url) && CallHostRegex.IsMatch(url);
 
     public static bool IsLmsUrl(string? url) =>
-        !string.IsNullOrWhiteSpace(url) &&
-        url.Contains("edu.kpfu", StringComparison.OrdinalIgnoreCase);
+        !string.IsNullOrWhiteSpace(url)
+        && url.Contains("edu.kpfu", StringComparison.OrdinalIgnoreCase);
 
     public static void ApplyOnlineNote(Lesson lesson)
     {
-        var parts = lesson.Notes
-            .Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+        var parts = lesson
+            .Notes.Split(
+                ';',
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+            )
             .Where(part => !part.Equals("онлайн", StringComparison.OrdinalIgnoreCase))
             .ToList();
 

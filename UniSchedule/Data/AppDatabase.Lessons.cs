@@ -24,10 +24,9 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             SELECT Id, GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                   MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source
+                   MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source, ElectiveKey
             FROM Lessons
             WHERE GroupCode = $group
             ORDER BY DayOfWeek, Start
@@ -40,10 +39,9 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             SELECT Id, GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                   MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source
+                   MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source, ElectiveKey
             FROM Lessons
             ORDER BY GroupCode, DayOfWeek, Start
             """;
@@ -74,26 +72,25 @@ public sealed partial class AppDatabase
         using var cmd = db.CreateCommand();
         if (lesson.Id > 0)
         {
-            cmd.CommandText =
-                """
+            cmd.CommandText = """
                 UPDATE Lessons SET
                     GroupCode=$group, DayOfWeek=$day, Start=$start, End=$end, Subject=$subject,
                     LessonType=$type, Teacher=$teacher, Room=$room, MeetingUrl=$meet, LmsUrl=$lms,
-                    Parity=$parity, WeekFrom=$from, WeekTo=$to, Notes=$notes, RawText=$raw, Source=$source
+                    Parity=$parity, WeekFrom=$from, WeekTo=$to, Notes=$notes, RawText=$raw, Source=$source,
+                    ElectiveKey=$elective
                 WHERE Id=$id
                 """;
             cmd.Parameters.AddWithValue("$id", lesson.Id);
         }
         else
         {
-            cmd.CommandText =
-                """
+            cmd.CommandText = """
                 INSERT INTO Lessons (
                     GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                    MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source)
+                    MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source, ElectiveKey)
                 VALUES (
                     $group, $day, $start, $end, $subject, $type, $teacher, $room,
-                    $meet, $lms, $parity, $from, $to, $notes, $raw, $source);
+                    $meet, $lms, $parity, $from, $to, $notes, $raw, $source, $elective);
                 SELECT last_insert_rowid();
                 """;
         }
@@ -135,16 +132,33 @@ public sealed partial class AppDatabase
         tx.Commit();
     }
 
-    public int ReplaceImported(IReadOnlyList<Lesson> lessons)
+    public int ReplaceImported(IReadOnlyList<Lesson> lessons, IReadOnlyList<string>? groups = null)
     {
+        var replaceGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (groups is not null)
+        {
+            foreach (var group in groups)
+            {
+                AddGroup(replaceGroups, group);
+            }
+        }
+
+        foreach (var lesson in lessons)
+        {
+            AddGroup(replaceGroups, lesson.GroupCode);
+        }
+
         using var db = Open();
         using var tx = db.BeginTransaction();
-        var oldKeys = ReadImportedKeys(db);
+        var oldKeys = ReadImportedKeys(db, replaceGroups);
         var linked = ReadHomeworkLinks(db, oldKeys.Keys);
 
-        using (var clear = db.CreateCommand())
+        foreach (var group in replaceGroups)
         {
-            clear.CommandText = "DELETE FROM Lessons WHERE Source='imported'";
+            using var clear = db.CreateCommand();
+            clear.CommandText =
+                "DELETE FROM Lessons WHERE Source='imported' AND GroupCode = $group COLLATE NOCASE";
+            clear.Parameters.AddWithValue("$group", group);
             clear.ExecuteNonQuery();
         }
 
@@ -152,14 +166,13 @@ public sealed partial class AppDatabase
         foreach (var lesson in lessons)
         {
             using var cmd = db.CreateCommand();
-            cmd.CommandText =
-                """
+            cmd.CommandText = """
                 INSERT INTO Lessons (
                     GroupCode, DayOfWeek, Start, End, Subject, LessonType, Teacher, Room,
-                    MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source)
+                    MeetingUrl, LmsUrl, Parity, WeekFrom, WeekTo, Notes, RawText, Source, ElectiveKey)
                 VALUES (
                     $group, $day, $start, $end, $subject, $type, $teacher, $room,
-                    $meet, $lms, $parity, $from, $to, $notes, $raw, $source);
+                    $meet, $lms, $parity, $from, $to, $notes, $raw, $source, $elective);
                 SELECT last_insert_rowid();
                 """;
             lesson.Source = LessonCodes.Imported;
@@ -172,7 +185,10 @@ public sealed partial class AppDatabase
         foreach (var (homeworkId, lessonId) in linked)
         {
             using var cmd = db.CreateCommand();
-            if (oldKeys.TryGetValue(lessonId, out var key) && newKeys.TryGetValue(key, out var newId))
+            if (
+                oldKeys.TryGetValue(lessonId, out var key)
+                && newKeys.TryGetValue(key, out var newId)
+            )
             {
                 cmd.CommandText = "UPDATE Homework SET LessonId=$lesson WHERE Id=$id";
                 cmd.Parameters.AddWithValue("$lesson", newId);
@@ -189,8 +205,7 @@ public sealed partial class AppDatabase
 
         using (var dropRollback = db.CreateCommand())
         {
-            dropRollback.CommandText =
-                """
+            dropRollback.CommandText = """
                 DELETE FROM SubjectRollback
                 WHERE LessonId NOT IN (SELECT Id FROM Lessons)
                 """;
@@ -207,50 +222,75 @@ public sealed partial class AppDatabase
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            list.Add(new Lesson
-            {
-                Id = reader.GetInt64(0),
-                GroupCode = reader.GetString(1),
-                DayOfWeek = (DayOfWeek)reader.GetInt32(2),
-                Start = TimeSpan.Parse(reader.GetString(3)),
-                End = TimeSpan.Parse(reader.GetString(4)),
-                Subject = reader.GetString(5),
-                LessonType = reader.GetString(6),
-                Teacher = reader.GetString(7),
-                Room = reader.GetString(8),
-                MeetingUrl = reader.GetString(9),
-                LmsUrl = reader.GetString(10),
-                Parity = (WeekParity)reader.GetInt32(11),
-                WeekFrom = reader.IsDBNull(12) ? null : reader.GetInt32(12),
-                WeekTo = reader.IsDBNull(13) ? null : reader.GetInt32(13),
-                Notes = reader.GetString(14),
-                RawText = reader.GetString(15),
-                Source = reader.GetString(16)
-            });
+            list.Add(
+                new Lesson
+                {
+                    Id = reader.GetInt64(0),
+                    GroupCode = reader.GetString(1),
+                    DayOfWeek = (DayOfWeek)reader.GetInt32(2),
+                    Start = TimeSpan.Parse(reader.GetString(3)),
+                    End = TimeSpan.Parse(reader.GetString(4)),
+                    Subject = reader.GetString(5),
+                    LessonType = reader.GetString(6),
+                    Teacher = reader.GetString(7),
+                    Room = reader.GetString(8),
+                    MeetingUrl = reader.GetString(9),
+                    LmsUrl = reader.GetString(10),
+                    Parity = (WeekParity)reader.GetInt32(11),
+                    WeekFrom = reader.IsDBNull(12) ? null : reader.GetInt32(12),
+                    WeekTo = reader.IsDBNull(13) ? null : reader.GetInt32(13),
+                    Notes = reader.GetString(14),
+                    RawText = reader.GetString(15),
+                    Source = reader.GetString(16),
+                    ElectiveKey = reader.GetString(17),
+                }
+            );
         }
 
         return list;
     }
 
-    private static Dictionary<long, string> ReadImportedKeys(SqliteConnection db)
+    private static void AddGroup(HashSet<string> groups, string? group)
     {
+        var code = (group ?? "").Trim();
+        if (code.Length > 0)
+        {
+            groups.Add(code);
+        }
+    }
+
+    private static Dictionary<long, string> ReadImportedKeys(
+        SqliteConnection db,
+        IReadOnlySet<string> groups
+    )
+    {
+        var keys = new Dictionary<long, string>();
+        if (groups.Count == 0)
+        {
+            return keys;
+        }
+
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             SELECT Id, GroupCode, DayOfWeek, Start, Subject
             FROM Lessons
             WHERE Source='imported'
             """;
-        var keys = new Dictionary<long, string>();
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
+            var group = reader.GetString(1);
+            if (!groups.Contains(group.Trim()))
+            {
+                continue;
+            }
+
             var lesson = new Lesson
             {
-                GroupCode = reader.GetString(1),
+                GroupCode = group,
                 DayOfWeek = (DayOfWeek)reader.GetInt32(2),
                 Start = TimeSpan.Parse(reader.GetString(3)),
-                Subject = reader.GetString(4)
+                Subject = reader.GetString(4),
             };
             keys[reader.GetInt64(0)] = LessonMatchKey.Of(lesson);
         }
@@ -276,5 +316,96 @@ public sealed partial class AppDatabase
         cmd.Parameters.AddWithValue("$notes", lesson.Notes);
         cmd.Parameters.AddWithValue("$raw", lesson.RawText);
         cmd.Parameters.AddWithValue("$source", lesson.Source);
+        cmd.Parameters.AddWithValue("$elective", lesson.ElectiveKey);
+    }
+
+    public List<ElectivePick> GetElectivePicks()
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT GroupCode, DayOfWeek, Start, Subject FROM ElectivePick";
+        var list = new List<ElectivePick>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            list.Add(
+                new ElectivePick
+                {
+                    GroupCode = reader.GetString(0),
+                    DayOfWeek = (DayOfWeek)reader.GetInt32(1),
+                    Start = reader.GetString(2),
+                    Subject = reader.GetString(3),
+                }
+            );
+        }
+
+        return list;
+    }
+
+    public void SetElectivePick(string group, DayOfWeek day, TimeSpan start, string subject)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO ElectivePick (GroupCode, DayOfWeek, Start, Subject)
+            VALUES ($group, $day, $start, $subject)
+            ON CONFLICT(GroupCode, DayOfWeek, Start) DO UPDATE SET Subject=$subject
+            """;
+        cmd.Parameters.AddWithValue("$group", group);
+        cmd.Parameters.AddWithValue("$day", (int)day);
+        cmd.Parameters.AddWithValue("$start", start.ToString(@"hh\:mm"));
+        cmd.Parameters.AddWithValue("$subject", subject.Trim());
+        cmd.ExecuteNonQuery();
+    }
+
+    public IReadOnlyList<string>? GetElectiveSubjects(string group)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText =
+            "SELECT Subject FROM ElectiveSubject WHERE GroupCode=$group ORDER BY Subject";
+        cmd.Parameters.AddWithValue("$group", group);
+        var list = new List<string>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            list.Add(reader.GetString(0));
+        }
+
+        return list.Count == 0 ? null : list.Where(subject => subject.Length > 0).ToList();
+    }
+
+    public void SetElectiveSubjects(string group, IReadOnlyList<string> subjects)
+    {
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        using (var clear = db.CreateCommand())
+        {
+            clear.CommandText = "DELETE FROM ElectiveSubject WHERE GroupCode=$group";
+            clear.Parameters.AddWithValue("$group", group);
+            clear.ExecuteNonQuery();
+        }
+
+        var names = subjects
+            .Select(subject => subject.Trim())
+            .Where(subject => subject.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (names.Count == 0)
+        {
+            names.Add("");
+        }
+
+        foreach (var subject in names)
+        {
+            using var cmd = db.CreateCommand();
+            cmd.CommandText =
+                "INSERT INTO ElectiveSubject (GroupCode, Subject) VALUES ($group, $subject)";
+            cmd.Parameters.AddWithValue("$group", group);
+            cmd.Parameters.AddWithValue("$subject", subject);
+            cmd.ExecuteNonQuery();
+        }
+
+        tx.Commit();
     }
 }

@@ -1,5 +1,4 @@
 using ClosedXML.Excel;
-using UniSchedule.Models;
 using UniSchedule.Services;
 
 namespace UniSchedule.Tests;
@@ -15,7 +14,10 @@ public class ItisExcelParserTests
             WriteWorkbook(path);
             var stages = new List<string>();
             var result = ItisExcelParser.Parse(path, new Progress<string>(stages.Add));
-            Assert.Contains(stages, stage => stage.Contains("Расписание", StringComparison.Ordinal));
+            Assert.Contains(
+                stages,
+                stage => stage.Contains("Расписание", StringComparison.Ordinal)
+            );
             Assert.Contains(stages, stage => stage.Contains("11-321", StringComparison.Ordinal));
             Assert.Contains(stages, stage => stage.Contains("11-205", StringComparison.Ordinal));
 
@@ -32,8 +34,16 @@ public class ItisExcelParserTests
 
             var networks = result.Lessons.Single(lesson => lesson.GroupCode == "11-205");
             Assert.Equal("https://zoom.us/j/net", networks.MeetingUrl);
-            Assert.Contains("Группы 11-999 в файле нет", result.FormatStoredMessage(2, "11-999"), StringComparison.Ordinal);
-            Assert.DoesNotContain("в файле нет", result.FormatStoredMessage(2, "11-321"), StringComparison.Ordinal);
+            Assert.Contains(
+                "Группы 11-999 в файле нет",
+                result.FormatStoredMessage(2, "11-999"),
+                StringComparison.Ordinal
+            );
+            Assert.DoesNotContain(
+                "в файле нет",
+                result.FormatStoredMessage(2, "11-321"),
+                StringComparison.Ordinal
+            );
         }
         finally
         {

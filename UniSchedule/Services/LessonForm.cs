@@ -27,7 +27,8 @@ public static class LessonForm
         string? endText,
         out TimeSpan start,
         out TimeSpan end,
-        out string? error)
+        out string? error
+    )
     {
         start = default;
         end = default;
@@ -37,9 +38,11 @@ public static class LessonForm
             return false;
         }
 
-        if (!TimeSpan.TryParse((startText ?? "").Trim(), out start) ||
-            !TimeSpan.TryParse((endText ?? "").Trim(), out end) ||
-            end <= start)
+        if (
+            !TimeSpan.TryParse((startText ?? "").Trim(), out start)
+            || !TimeSpan.TryParse((endText ?? "").Trim(), out end)
+            || end <= start
+        )
         {
             error = TimeError;
             return false;
@@ -62,22 +65,25 @@ public static class LessonForm
         WeekParity Parity,
         string WeekFrom,
         string WeekTo,
-        string Notes);
+        string Notes
+    );
 
-    public static bool HasEdits(Fields baseline, Fields current) => Normalize(baseline) != Normalize(current);
+    public static bool HasEdits(Fields baseline, Fields current) =>
+        Normalize(baseline) != Normalize(current);
 
-    private static Fields Normalize(Fields fields) => fields with
-    {
-        Start = fields.Start.Trim(),
-        End = fields.End.Trim(),
-        Subject = fields.Subject.Trim(),
-        LessonType = fields.LessonType.Trim(),
-        Teacher = fields.Teacher.Trim(),
-        Room = fields.Room.Trim(),
-        MeetingUrl = fields.MeetingUrl.Trim(),
-        LmsUrl = fields.LmsUrl.Trim(),
-        WeekFrom = fields.WeekFrom.Trim(),
-        WeekTo = fields.WeekTo.Trim(),
-        Notes = fields.Notes.Trim()
-    };
+    private static Fields Normalize(Fields fields) =>
+        fields with
+        {
+            Start = fields.Start.Trim(),
+            End = fields.End.Trim(),
+            Subject = fields.Subject.Trim(),
+            LessonType = fields.LessonType.Trim(),
+            Teacher = fields.Teacher.Trim(),
+            Room = fields.Room.Trim(),
+            MeetingUrl = fields.MeetingUrl.Trim(),
+            LmsUrl = fields.LmsUrl.Trim(),
+            WeekFrom = fields.WeekFrom.Trim(),
+            WeekTo = fields.WeekTo.Trim(),
+            Notes = fields.Notes.Trim(),
+        };
 }

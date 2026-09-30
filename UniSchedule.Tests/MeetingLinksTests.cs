@@ -36,11 +36,7 @@ public class MeetingLinksTests
     [Fact]
     public void ApplyOnlineNote_PutsOnlineFirstWithoutDuplicates()
     {
-        var lesson = new Lesson
-        {
-            MeetingUrl = "https://zoom.us/j/1",
-            Notes = "онлайн; перенос"
-        };
+        var lesson = new Lesson { MeetingUrl = "https://zoom.us/j/1", Notes = "онлайн; перенос" };
 
         MeetingLinks.ApplyOnlineNote(lesson);
 

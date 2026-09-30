@@ -19,6 +19,7 @@ public sealed class Lesson
     public string Notes { get; set; } = "";
     public string RawText { get; set; } = "";
     public string Source { get; set; } = LessonCodes.Manual;
+    public string ElectiveKey { get; set; } = "";
 
     public Lesson Clone() => (Lesson)MemberwiseClone();
 
@@ -45,6 +46,5 @@ public sealed class Lesson
     public bool HasLink =>
         !string.IsNullOrWhiteSpace(MeetingUrl) || !string.IsNullOrWhiteSpace(LmsUrl);
 
-    public string PrimaryUrl =>
-        !string.IsNullOrWhiteSpace(MeetingUrl) ? MeetingUrl : LmsUrl;
+    public string PrimaryUrl => !string.IsNullOrWhiteSpace(MeetingUrl) ? MeetingUrl : LmsUrl;
 }

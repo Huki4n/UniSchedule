@@ -26,18 +26,32 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
 
     private bool _finished;
 
-    public LessonEditWindow(Lesson lesson, bool isNew, IReadOnlyList<Homework>? homework = null, bool hasRelated = false, string? rollbackSubject = null)
+    public LessonEditWindow(
+        Lesson lesson,
+        bool isNew,
+        IReadOnlyList<Homework>? homework = null,
+        bool hasRelated = false,
+        string? rollbackSubject = null
+    )
     {
         InitializeComponent();
         _lesson = lesson;
         _isNew = isNew;
         _hasRelated = hasRelated;
         _homeworkCount = homework?.Count ?? 0;
-        _rollbackSubject = string.IsNullOrWhiteSpace(rollbackSubject) ? null : rollbackSubject.Trim();
+        _rollbackSubject = string.IsNullOrWhiteSpace(rollbackSubject)
+            ? null
+            : rollbackSubject.Trim();
         FillHomework(homework ?? []);
         DeleteButton.Visibility = isNew ? Visibility.Collapsed : Visibility.Visible;
-        if (_rollbackSubject is not null &&
-            !string.Equals(_rollbackSubject, lesson.Subject.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (
+            _rollbackSubject is not null
+            && !string.Equals(
+                _rollbackSubject,
+                lesson.Subject.Trim(),
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
         {
             RollbackSubjectButton.Content = $"Вернуть «{_rollbackSubject}»";
             RollbackSubjectButton.Visibility = Visibility.Visible;
@@ -51,13 +65,21 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
 
     private void Fill()
     {
-        foreach (var day in new[]
-                 {
-                     DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
-                     DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday
-                 })
+        foreach (
+            var day in new[]
+            {
+                DayOfWeek.Monday,
+                DayOfWeek.Tuesday,
+                DayOfWeek.Wednesday,
+                DayOfWeek.Thursday,
+                DayOfWeek.Friday,
+                DayOfWeek.Saturday,
+            }
+        )
         {
-            DayBox.Items.Add(new ComboBoxItem { Content = AcademicCalendar.DayName(day), Tag = day });
+            DayBox.Items.Add(
+                new ComboBoxItem { Content = AcademicCalendar.DayName(day), Tag = day }
+            );
         }
 
         DayBox.SelectedIndex = Math.Clamp((int)_lesson.DayOfWeek - 1, 0, 5);
@@ -85,7 +107,7 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
             LessonCodes.Lab => 3,
             LessonCodes.Credit => 4,
             LessonCodes.Exam => 5,
-            _ => 0
+            _ => 0,
         };
 
         ParityBox.Items.Add(new ComboBoxItem { Content = "Все недели", Tag = WeekParity.All });
@@ -102,7 +124,11 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
         }
 
         HomeworkPanel.Visibility = Visibility.Visible;
-        foreach (var item in homework.OrderBy(item => item.Deadline).ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase))
+        foreach (
+            var item in homework
+                .OrderBy(item => item.Deadline)
+                .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+        )
         {
             var button = new System.Windows.Controls.Button
             {
@@ -110,7 +136,7 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
                 Tag = item,
                 Height = 36,
                 Margin = new Thickness(0, 0, 0, 8),
-                HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left
+                HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left,
             };
             button.Click += OpenHomework_Click;
             HomeworkList.Items.Add(button);
@@ -134,9 +160,13 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
 
     private LessonForm.Fields ReadFields()
     {
-        var day = DayBox.SelectedItem is ComboBoxItem { Tag: DayOfWeek selected } ? selected : DayOfWeek.Monday;
+        var day = DayBox.SelectedItem is ComboBoxItem { Tag: DayOfWeek selected }
+            ? selected
+            : DayOfWeek.Monday;
         var type = TypeBox.SelectedItem is ComboBoxItem { Tag: string code } ? code : "";
-        var parity = ParityBox.SelectedItem is ComboBoxItem { Tag: WeekParity value } ? value : WeekParity.All;
+        var parity = ParityBox.SelectedItem is ComboBoxItem { Tag: WeekParity value }
+            ? value
+            : WeekParity.All;
         return new LessonForm.Fields(
             day,
             StartBox.Text,
@@ -150,7 +180,8 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
             parity,
             WeekFromBox.Text,
             WeekToBox.Text,
-            NotesBox.Text);
+            NotesBox.Text
+        );
     }
 
     private void RollbackSubject_Click(object sender, RoutedEventArgs e)
@@ -163,9 +194,22 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (!LessonForm.TryValidate(SubjectBox.Text, StartBox.Text, EndBox.Text, out var start, out var end, out var error))
+        if (
+            !LessonForm.TryValidate(
+                SubjectBox.Text,
+                StartBox.Text,
+                EndBox.Text,
+                out var start,
+                out var end,
+                out var error
+            )
+        )
         {
-            AppDialog.Info(Window.GetWindow(this), "Нельзя сохранить", error ?? LessonForm.SubjectError);
+            AppDialog.Info(
+                Window.GetWindow(this),
+                "Нельзя сохранить",
+                error ?? LessonForm.SubjectError
+            );
             return;
         }
 
@@ -207,7 +251,13 @@ public partial class LessonEditWindow : System.Windows.Controls.UserControl
 
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
-        if (!AppDialog.Confirm(Window.GetWindow(this), "Удалить пару?", LessonForm.DeleteConfirmText(_lesson.Subject, _homeworkCount)))
+        if (
+            !AppDialog.Confirm(
+                Window.GetWindow(this),
+                "Удалить пару?",
+                LessonForm.DeleteConfirmText(_lesson.Subject, _homeworkCount)
+            )
+        )
         {
             return;
         }
