@@ -13,7 +13,7 @@ public class HomeworkCommentDraftTests
             Id = 3,
             HomeworkId = 8,
             Body = "был",
-            CreatedAt = new DateTime(2026, 9, 25, 10, 0, 0)
+            CreatedAt = new DateTime(2026, 9, 25, 10, 0, 0),
         };
         var draft = new HomeworkCommentDraft([existing]);
         var created = new DateTime(2026, 9, 25, 11, 30, 40);
@@ -41,7 +41,12 @@ public class HomeworkCommentDraftTests
     [Fact]
     public void Draft_HasEdits_WhenCommentAddedOrRemoved()
     {
-        var existing = new HomeworkComment { Id = 3, HomeworkId = 8, Body = "был" };
+        var existing = new HomeworkComment
+        {
+            Id = 3,
+            HomeworkId = 8,
+            Body = "был",
+        };
         var draft = new HomeworkCommentDraft([existing]);
 
         Assert.False(draft.HasEdits);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using UniSchedule.Models;
 using UniSchedule.Services;
 
@@ -7,6 +8,7 @@ public sealed class MonthCalendarSnapshot
 {
     public required string MonthLabel { get; init; }
     public required IReadOnlyList<MonthWeekVm> Weeks { get; init; }
+    public required IReadOnlyList<HomeworkCardVm> Overdue { get; init; }
 }
 
 public sealed class MonthWeekVm
@@ -34,11 +36,16 @@ public sealed class HomeworkCardVm
     public IReadOnlyList<string> Links { get; init; } = [];
     public string Accent { get; init; } = "#60A5FA";
     public bool IsDone { get; init; }
+    public bool IsOverdue { get; init; }
+    public string DeadlineText { get; init; } = "";
 }
 
 public static class HomeworkCalendar
 {
     public const string EmptyMonthText = "Домашек в этом месяце нет.";
+    public const string OverdueMark = "просрочено";
+
+    public static string OverdueLabel(int count) => $"Просрочено: {count}";
 
     public static MonthCalendarSnapshot Build(
         IReadOnlyList<Homework> homework,
@@ -46,7 +53,8 @@ public static class HomeworkCalendar
         DateTime month,
         DateTime now,
         string? search,
-        long? lessonFilter)
+        long? lessonFilter
+    )
     {
         var query = (search ?? "").Trim();
         var byId = lessons.ToDictionary(lesson => lesson.Id);
@@ -59,9 +67,11 @@ public static class HomeworkCalendar
         var first = new DateTime(month.Year, month.Month, 1);
         var last = first.AddMonths(1).AddDays(-1);
         var weeks = new List<MonthWeekVm>();
-        for (var weekStart = AcademicCalendar.StartOfWeek(first);
-             weekStart <= last;
-             weekStart = weekStart.AddDays(7))
+        for (
+            var weekStart = AcademicCalendar.StartOfWeek(first);
+            weekStart <= last;
+            weekStart = weekStart.AddDays(7)
+        )
         {
             var days = new List<MonthDayVm>(7);
             for (var day = 0; day < 7; day++)
@@ -73,26 +83,36 @@ public static class HomeworkCalendar
                         .Where(item => item.Deadline.Date == date)
                         .OrderBy(item => item.IsDone)
                         .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
-                        .Select(item => ToCard(item, byId[item.LessonId]))
+                        .Select(item => ToCard(item, byId[item.LessonId], now))
                         .ToList()
                     : [];
-                days.Add(new MonthDayVm
-                {
-                    Date = date,
-                    DayNumber = inMonth ? date.Day.ToString() : "",
-                    IsCurrentMonth = inMonth,
-                    IsToday = inMonth && date == now.Date,
-                    Items = items
-                });
+                days.Add(
+                    new MonthDayVm
+                    {
+                        Date = date,
+                        DayNumber = inMonth ? date.Day.ToString() : "",
+                        IsCurrentMonth = inMonth,
+                        IsToday = inMonth && date == now.Date,
+                        Items = items,
+                    }
+                );
             }
 
             weeks.Add(new MonthWeekVm { Days = days });
         }
 
+        var overdue = visible
+            .Where(item => !item.IsDone && item.Deadline.Date < now.Date)
+            .OrderBy(item => item.Deadline)
+            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            .Select(item => ToCard(item, byId[item.LessonId], now))
+            .ToList();
+
         return new MonthCalendarSnapshot
         {
             MonthLabel = AcademicCalendar.MonthTitle(first),
-            Weeks = weeks
+            Weeks = weeks,
+            Overdue = overdue,
         };
     }
 
@@ -114,28 +134,34 @@ public static class HomeworkCalendar
             return true;
         }
 
-        return homework.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               homework.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               lesson.Subject.Contains(query, StringComparison.OrdinalIgnoreCase);
+        return homework.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || homework.Description.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || lesson.Subject.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     public static string OneLine(string? text)
     {
-        var parts = (text ?? "").Split(['\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var parts = (text ?? "").Split(
+            ['\r', '\n', '\t'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+        );
         return string.Join(' ', parts);
     }
 
-    private static HomeworkCardVm ToCard(Homework homework, Lesson lesson) => new()
-    {
-        Homework = homework,
-        Lesson = lesson,
-        Title = homework.Title,
-        Subject = lesson.Subject,
-        Description = OneLine(homework.Description),
-        Links = LinkLines(homework),
-        Accent = LessonAccent.For(lesson),
-        IsDone = homework.IsDone
-    };
+    private static HomeworkCardVm ToCard(Homework homework, Lesson lesson, DateTime now) =>
+        new()
+        {
+            Homework = homework,
+            Lesson = lesson,
+            Title = homework.Title,
+            Subject = lesson.Subject,
+            Description = OneLine(homework.Description),
+            Links = LinkLines(homework),
+            Accent = LessonAccent.For(lesson),
+            IsDone = homework.IsDone,
+            IsOverdue = !homework.IsDone && homework.Deadline.Date < now.Date,
+            DeadlineText = homework.Deadline.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
+        };
 
     private static IReadOnlyList<string> LinkLines(Homework homework)
     {

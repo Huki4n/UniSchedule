@@ -2,8 +2,7 @@ namespace UniSchedule.Services;
 
 internal static class ToastLog
 {
-    public static string DefaultPath =>
-        Path.Combine(Path.GetTempPath(), "unischedule-toast.txt");
+    public static string DefaultPath => Path.Combine(Path.GetTempPath(), "unischedule-toast.txt");
 
     public static void Append(Exception exception, string path)
     {

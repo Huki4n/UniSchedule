@@ -7,14 +7,10 @@ public sealed partial class AppDatabase
     private readonly string _connectionString;
 
     public AppDatabase()
-        : this(DefaultDatabasePath(), migrateLegacy: true)
-    {
-    }
+        : this(DefaultDatabasePath(), migrateLegacy: true) { }
 
     public AppDatabase(string databasePath)
-        : this(databasePath, migrateLegacy: false)
-    {
-    }
+        : this(databasePath, migrateLegacy: false) { }
 
     private AppDatabase(string databasePath, bool migrateLegacy)
     {
@@ -31,7 +27,7 @@ public sealed partial class AppDatabase
 
         _connectionString = new SqliteConnectionStringBuilder
         {
-            DataSource = databasePath
+            DataSource = databasePath,
         }.ToString();
         Initialize();
     }
@@ -40,7 +36,8 @@ public sealed partial class AppDatabase
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "UniSchedule",
-            "schedule.db");
+            "schedule.db"
+        );
 
     public static string LegacyDatabasePath() =>
         Path.Combine(AppContext.BaseDirectory, "schedule.db");
@@ -96,8 +93,7 @@ public sealed partial class AppDatabase
         // Column names, Settings keys and Source codes are a persisted contract.
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             PRAGMA journal_mode=WAL;
             CREATE TABLE IF NOT EXISTS Lessons (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -158,13 +154,113 @@ public sealed partial class AppDatabase
         EnsureHomeworkNotificationLog(db);
         EnsureColumn(db, "Homework", "Url", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(db, "Homework", "ExtraUrl", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(db, "Lessons", "ElectiveKey", "TEXT NOT NULL DEFAULT ''");
+        using var picks = db.CreateCommand();
+        picks.CommandText = """
+            CREATE TABLE IF NOT EXISTS ElectivePick (
+                GroupCode TEXT NOT NULL,
+                DayOfWeek INTEGER NOT NULL,
+                Start TEXT NOT NULL,
+                Subject TEXT NOT NULL,
+                PRIMARY KEY (GroupCode, DayOfWeek, Start)
+            );
+            CREATE TABLE IF NOT EXISTS ElectiveSubject (
+                GroupCode TEXT NOT NULL,
+                Subject TEXT NOT NULL,
+                PRIMARY KEY (GroupCode, Subject)
+            );
+            """;
+        picks.ExecuteNonQuery();
+    }
+
+    public void BackupTo(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Не удалось сохранить копию.");
+        }
+
+        var destination = Path.GetFullPath(path);
+        var sourcePath = Path.GetFullPath(
+            new SqliteConnectionStringBuilder(_connectionString).DataSource
+        );
+        if (string.Equals(destination, sourcePath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Нельзя сохранить копию поверх открытой базы.");
+        }
+
+        var directory = Path.GetDirectoryName(destination);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        if (File.Exists(destination))
+        {
+            File.Delete(destination);
+        }
+
+        foreach (var suffix in new[] { "-wal", "-shm" })
+        {
+            var side = destination + suffix;
+            if (File.Exists(side))
+            {
+                File.Delete(side);
+            }
+        }
+
+        using var source = Open();
+        using var target = new SqliteConnection(
+            new SqliteConnectionStringBuilder { DataSource = destination }.ToString()
+        );
+        target.Open();
+        source.BackupDatabase(target);
+    }
+
+    public void RestoreFrom(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Не удалось открыть копию.");
+        }
+
+        var sourcePath = Path.GetFullPath(path);
+        var destination = Path.GetFullPath(
+            new SqliteConnectionStringBuilder(_connectionString).DataSource
+        );
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException("Не удалось открыть копию.", sourcePath);
+        }
+
+        if (string.Equals(sourcePath, destination, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Нельзя открыть копию поверх открытой базы.");
+        }
+
+        using var incoming = new SqliteConnection(
+            new SqliteConnectionStringBuilder { DataSource = sourcePath }.ToString()
+        );
+        incoming.Open();
+        using var current = Open();
+        incoming.BackupDatabase(current);
     }
 
     public void ClearStoredData()
     {
         using var db = Open();
         using var tx = db.BeginTransaction();
-        foreach (var table in new[] { "HomeworkComment", "Homework", "SubjectRollback", "NotificationLog", "HomeworkNotificationLog", "Lessons" })
+        foreach (
+            var table in new[]
+            {
+                "HomeworkComment",
+                "Homework",
+                "SubjectRollback",
+                "NotificationLog",
+                "HomeworkNotificationLog",
+                "Lessons",
+            }
+        )
         {
             using var cmd = db.CreateCommand();
             cmd.CommandText = $"DELETE FROM {table}";
@@ -184,8 +280,7 @@ public sealed partial class AppDatabase
         }
 
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             CREATE TABLE IF NOT EXISTS HomeworkNotificationLog (
                 HomeworkId INTEGER NOT NULL,
                 FireDate TEXT NOT NULL,
@@ -196,7 +291,12 @@ public sealed partial class AppDatabase
         cmd.ExecuteNonQuery();
     }
 
-    private static void EnsureColumn(SqliteConnection db, string table, string column, string definition)
+    private static void EnsureColumn(
+        SqliteConnection db,
+        string table,
+        string column,
+        string definition
+    )
     {
         if (HasColumn(db, table, column))
         {

@@ -26,6 +26,7 @@
 | `WeekFrom`, `WeekTo` | Целые или NULL |
 | `Notes`, `RawText` | Заметки и исходный текст ячейки |
 | `Source` | `manual` или `imported` |
+| `ElectiveKey` | Пусто, либо общий ключ вариантов «по выбору»: группа, день и начало слота |
 
 `LessonType` и `Source` — коды из `LessonCodes`: `lecture`, `practice`, `lab`, `credit`, `exam`, `manual`, `imported`. Значения в базе не переименовывать.
 
@@ -33,7 +34,28 @@
 
 Импорт описан в [loading.md](loading.md): удаляются только строки `Source='imported'`. Домашки этих пар перепривязываются или удаляются, как описано в [homework.md](homework.md). После замены удаляются строки `SubjectRollback`, чей `LessonId` больше не существует.
 
-`ClearStoredData` одной транзакцией удаляет `HomeworkComment`, `Homework`, `SubjectRollback`, `NotificationLog`, `HomeworkNotificationLog` и `Lessons`. `Settings` не меняется.
+`ClearStoredData` одной транзакцией удаляет `HomeworkComment`, `Homework`, `SubjectRollback`, `NotificationLog`, `HomeworkNotificationLog` и `Lessons`. `Settings` и `ElectivePick` не меняются.
+
+`BackupTo` пишет согласованную копию открытой базы в выбранный файл через SQLite Backup. Файл самой открытой базы целью быть не может. Существующий файл по этому пути заменяется вместе с его `-wal` и `-shm`.
+
+`RestoreFrom` копирует выбранный файл в открытую базу тем же Backup. Файл самой открытой базы источником быть не может. После записи следующие чтения видят данные файла: пары, домашки, настройки и выбор курсов.
+
+## ElectivePick
+
+| Колонка | Смысл |
+| --- | --- |
+| `GroupCode`, `DayOfWeek`, `Start` | Первичный ключ слота. `Start` — `hh:mm` |
+| `Subject` | Предмет, который показывать |
+
+`SetElectivePick` пишет одну строку на слот: повтор заменяет предмет. `GetElectivePicks` отдаёт все строки. Очистка данных таблицу не трогает, чтобы выбор пережил повторный импорт.
+
+## ElectiveSubject
+
+| Колонка | Смысл |
+| --- | --- |
+| `GroupCode`, `Subject` | Первичный ключ. Пустой `Subject` значит, что набор для группы сохранён и в нём ничего не отмечено |
+
+Пока строк группы нет, доска берёт `ElectivePick`. `SetElectiveSubjects` заменяет набор группы целиком. `GetElectiveSubjects` возвращает `null`, если строк нет, и список предметов, если набор уже сохраняли. Переименование отмеченного elective-предмета при сохранении пары переписывает имя в этом наборе — см. [schedule.md](schedule.md). Очистка данных таблицу не трогает.
 
 ## SubjectRollback
 

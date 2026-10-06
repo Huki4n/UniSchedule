@@ -7,37 +7,51 @@ public static class LessonTextParser
 {
     private static readonly Regex TeacherRegex = new(
         @"[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\s+[А-ЯЁ]\.\s*[А-ЯЁ]\.?",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled
+    );
 
     private static readonly Regex UrlRegex = new(
         @"https?://[^\s\)\],]+",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
 
     private static readonly Regex TimeRegex = new(
         @"(\d{1,2})[.:](\d{2})\s*[-–—]\s*(\d{1,2})[.:](\d{2})",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled
+    );
 
     private static readonly Regex WeekRangeRegex = new(
         @"(\d+)\s*[-–]\s*(\d+)\s*нед",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
 
     private static readonly Regex WeekFromRegex = new(
         @"с(?:о)?\s+(\d+)\s+недел",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
 
     private static readonly Regex WeekSingleRegex = new(
         @"(?:^|[^\d])(\d{1,2})\s*нед",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
 
     private static readonly Regex RoomAudRegex = new(
         @"ауд\.?\s*([А-Яа-яA-Za-z0-9.\-]+(?:\s+гл\.?\s*здание)?)",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
 
     private static readonly Regex RoomInRegex = new(
         @"\bв\s+(\d{3,4}[а-яА-Я]?)",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
 
-    public static IReadOnlyList<Lesson> ParseAll(string raw, DayOfWeek day, TimeSpan start, TimeSpan end, string groupCode)
+    public static IReadOnlyList<Lesson> ParseAll(
+        string raw,
+        DayOfWeek day,
+        TimeSpan start,
+        TimeSpan end,
+        string groupCode
+    )
     {
         var chunks = SplitElectives(raw);
         if (chunks.Count <= 1)
@@ -45,13 +59,31 @@ public static class LessonTextParser
             return [Parse(raw, day, start, end, groupCode)];
         }
 
-        return chunks
+        var parsed = chunks
             .Select(chunk => Parse(chunk, day, start, end, groupCode))
             .Where(lesson => !string.IsNullOrWhiteSpace(lesson.Subject))
             .ToList();
+        if (parsed.Count < 2)
+        {
+            return parsed.Count == 0 ? [Parse(raw, day, start, end, groupCode)] : parsed;
+        }
+
+        var key = ElectiveChoice.SlotKey(groupCode, day, start);
+        foreach (var lesson in parsed)
+        {
+            lesson.ElectiveKey = key;
+        }
+
+        return parsed;
     }
 
-    public static Lesson Parse(string raw, DayOfWeek day, TimeSpan start, TimeSpan end, string groupCode)
+    public static Lesson Parse(
+        string raw,
+        DayOfWeek day,
+        TimeSpan start,
+        TimeSpan end,
+        string groupCode
+    )
     {
         var text = Normalize(raw);
         var lesson = new Lesson
@@ -61,7 +93,7 @@ public static class LessonTextParser
             Start = start,
             End = end,
             RawText = raw.Trim(),
-            Source = LessonCodes.Imported
+            Source = LessonCodes.Imported,
         };
 
         foreach (var url in UrlRegex.Matches(text).Select(m => m.Value.TrimEnd('.', ',', ';')))
@@ -94,9 +126,11 @@ public static class LessonTextParser
         {
             lesson.WeekFrom = int.Parse(fromWeek.Groups[1].Value);
         }
-        else if (WeekSingleRegex.Match(text) is { Success: true } single
-                 && int.TryParse(single.Groups[1].Value, out var week)
-                 && week is >= 1 and <= 20)
+        else if (
+            WeekSingleRegex.Match(text) is { Success: true } single
+            && int.TryParse(single.Groups[1].Value, out var week)
+            && week is >= 1 and <= 20
+        )
         {
             lesson.WeekFrom = week;
             lesson.WeekTo = week;
@@ -130,9 +164,11 @@ public static class LessonTextParser
 
         lesson.Room = ExtractRoom(text);
 
-        if (TimeRegex.Match(text) is { Success: true } altTime
+        if (
+            TimeRegex.Match(text) is { Success: true } altTime
             && TryTime(altTime, out var altStart, out var altEnd)
-            && (altStart != start || altEnd != end))
+            && (altStart != start || altEnd != end)
+        )
         {
             lesson.Start = altStart;
             lesson.End = altEnd;
@@ -165,12 +201,18 @@ public static class LessonTextParser
         }
 
         var compact = Regex.Replace(value, @"[\s*]+", "").ToUpperInvariant();
-        if (compact.Contains("ПОНЕДЕЛЬНИК")) return DayOfWeek.Monday;
-        if (compact.Contains("ВТОРНИК")) return DayOfWeek.Tuesday;
-        if (compact.Contains("СРЕДА")) return DayOfWeek.Wednesday;
-        if (compact.Contains("ЧЕТВЕРГ")) return DayOfWeek.Thursday;
-        if (compact.Contains("ПЯТНИЦА")) return DayOfWeek.Friday;
-        if (compact.Contains("СУББОТА")) return DayOfWeek.Saturday;
+        if (compact.Contains("ПОНЕДЕЛЬНИК"))
+            return DayOfWeek.Monday;
+        if (compact.Contains("ВТОРНИК"))
+            return DayOfWeek.Tuesday;
+        if (compact.Contains("СРЕДА"))
+            return DayOfWeek.Wednesday;
+        if (compact.Contains("ЧЕТВЕРГ"))
+            return DayOfWeek.Thursday;
+        if (compact.Contains("ПЯТНИЦА"))
+            return DayOfWeek.Friday;
+        if (compact.Contains("СУББОТА"))
+            return DayOfWeek.Saturday;
         return null;
     }
 
@@ -192,7 +234,8 @@ public static class LessonTextParser
             raw,
             @"дисциплин[аы]?\s+по выбору\s*:?\s*",
             "",
-            RegexOptions.IgnoreCase);
+            RegexOptions.IgnoreCase
+        );
         text = text.Trim();
         var chunks = new List<string>();
 
@@ -209,7 +252,8 @@ public static class LessonTextParser
             var tail = Regex.Match(
                 after,
                 @"^[\s,.;:/–-]*(?:\((?:вебинар[^)]*|онлайн|цор)[^)]*\)|вебинары|вебинар|онлайн|цор|ауд\.?[^\n,]*|в\s+\d{3,4}[а-яА-Я]?|https?://\S+)*",
-                RegexOptions.IgnoreCase);
+                RegexOptions.IgnoreCase
+            );
             var tailText = tail.Success ? after[..tail.Length] : "";
             var chunk = $"{subject.Trim()} {teacher.Value} {tailText.Trim()}".Trim();
             if (!string.IsNullOrWhiteSpace(subject) && chunk.Length > 6)
@@ -226,11 +270,19 @@ public static class LessonTextParser
     private static string ExtractSubject(string text, string teacher)
     {
         var cleaned = UrlRegex.Replace(text, "");
-        cleaned = Regex.Replace(cleaned, @"дисциплин[аы]?\s+по выбору\s*:?\s*", "", RegexOptions.IgnoreCase);
+        cleaned = Regex.Replace(
+            cleaned,
+            @"дисциплин[аы]?\s+по выбору\s*:?\s*",
+            "",
+            RegexOptions.IgnoreCase
+        );
         cleaned = Regex.Replace(cleaned, @"\s+", " ").Trim();
 
         var colon = cleaned.IndexOf(':');
-        if (colon is > 4 and < 80 && !cleaned[..colon].Contains("по выбору", StringComparison.OrdinalIgnoreCase))
+        if (
+            colon is > 4 and < 80
+            && !cleaned[..colon].Contains("по выбору", StringComparison.OrdinalIgnoreCase)
+        )
         {
             return TrimSubject(cleaned[..colon]);
         }
@@ -256,7 +308,12 @@ public static class LessonTextParser
     private static string TrimSubject(string value)
     {
         var subject = value.Trim(' ', ',', '.', '/', '-', ':', ';');
-        subject = Regex.Replace(subject, @"\b(лекции|лекция|лек\.|практ\.|прак\.|лаб\.|зач[её]т|экзамен)\b", "", RegexOptions.IgnoreCase);
+        subject = Regex.Replace(
+            subject,
+            @"\b(лекции|лекция|лек\.|практ\.|прак\.|лаб\.|зач[её]т|экзамен)\b",
+            "",
+            RegexOptions.IgnoreCase
+        );
         subject = Regex.Replace(subject, @"\s+", " ").Trim(' ', ',', '.');
         return string.IsNullOrWhiteSpace(subject) ? value.Trim() : subject;
     }
@@ -288,8 +345,10 @@ public static class LessonTextParser
             return inRoom.Groups[1].Value.Trim();
         }
 
-        if (Regex.Match(text, @"(\d{3,4})(?:\s|$)") is { Success: true } digits
-            && !text.Contains("нед", StringComparison.OrdinalIgnoreCase))
+        if (
+            Regex.Match(text, @"(\d{3,4})(?:\s|$)") is { Success: true } digits
+            && !text.Contains("нед", StringComparison.OrdinalIgnoreCase)
+        )
         {
             return digits.Groups[1].Value;
         }
@@ -300,6 +359,11 @@ public static class LessonTextParser
     private static string ExtractNotes(string text)
     {
         var parts = new List<string>();
+        if (Regex.IsMatch(text, @"вебинар", RegexOptions.IgnoreCase))
+        {
+            parts.Add("вебинары");
+        }
+
         if (Regex.IsMatch(text, @"не будет", RegexOptions.IgnoreCase))
         {
             parts.Add("не будет");

@@ -13,13 +13,14 @@ public sealed class ImportResult
     public string FormatStoredMessage(int storedCount, string selectedGroup)
     {
         var hasGroup = Groups.Any(g =>
-            string.Equals(g, selectedGroup, StringComparison.OrdinalIgnoreCase));
+            string.Equals(g, selectedGroup, StringComparison.OrdinalIgnoreCase)
+        );
         var message = $"Импортировано пар: {storedCount} из {Groups.Count} групп.";
         if (!hasGroup)
         {
             message +=
-                $"{Environment.NewLine}Группы {selectedGroup} в файле нет. " +
-                "Она останется пустой — добавьте пары вручную или выберите другую группу.";
+                $"{Environment.NewLine}Группы {selectedGroup} в файле нет. "
+                + "Она останется пустой — добавьте пары вручную или выберите другую группу.";
         }
 
         return message;
@@ -74,9 +75,18 @@ public static class ItisExcelParser
                     continue;
                 }
 
-                foreach (var lesson in LessonTextParser.ParseAll(cellText, day.Value, start, end, group.Code))
+                foreach (
+                    var lesson in LessonTextParser.ParseAll(
+                        cellText,
+                        day.Value,
+                        start,
+                        end,
+                        group.Code
+                    )
+                )
                 {
-                    var key = $"{day}|{start}|{end}|{NormalizeKey(lesson.Subject)}|{NormalizeKey(lesson.Teacher)}";
+                    var key =
+                        $"{day}|{start}|{end}|{NormalizeKey(lesson.Subject)}|{NormalizeKey(lesson.Teacher)}";
                     if (!seen.Add(key))
                     {
                         continue;
@@ -98,17 +108,31 @@ public static class ItisExcelParser
 
     private static IXLWorksheet? FindSheet(XLWorkbook workbook, string token) =>
         workbook.Worksheets.FirstOrDefault(s =>
-            s.Name.Contains(token, StringComparison.OrdinalIgnoreCase));
+            s.Name.Contains(token, StringComparison.OrdinalIgnoreCase)
+        );
 
-    private static Dictionary<(int Row, int Col), (int Row, int Col)> BuildMergeMap(IXLWorksheet sheet)
+    private static Dictionary<(int Row, int Col), (int Row, int Col)> BuildMergeMap(
+        IXLWorksheet sheet
+    )
     {
         var map = new Dictionary<(int, int), (int, int)>();
         foreach (var range in sheet.MergedRanges)
         {
-            var origin = (range.RangeAddress.FirstAddress.RowNumber, range.RangeAddress.FirstAddress.ColumnNumber);
-            for (var row = range.RangeAddress.FirstAddress.RowNumber; row <= range.RangeAddress.LastAddress.RowNumber; row++)
+            var origin = (
+                range.RangeAddress.FirstAddress.RowNumber,
+                range.RangeAddress.FirstAddress.ColumnNumber
+            );
+            for (
+                var row = range.RangeAddress.FirstAddress.RowNumber;
+                row <= range.RangeAddress.LastAddress.RowNumber;
+                row++
+            )
             {
-                for (var col = range.RangeAddress.FirstAddress.ColumnNumber; col <= range.RangeAddress.LastAddress.ColumnNumber; col++)
+                for (
+                    var col = range.RangeAddress.FirstAddress.ColumnNumber;
+                    col <= range.RangeAddress.LastAddress.ColumnNumber;
+                    col++
+                )
                 {
                     map[(row, col)] = origin;
                 }
@@ -120,7 +144,8 @@ public static class ItisExcelParser
 
     private static List<(string Code, int Column)> ReadGroups(
         IXLWorksheet sheet,
-        Dictionary<(int Row, int Col), (int Row, int Col)> mergeMap)
+        Dictionary<(int Row, int Col), (int Row, int Col)> mergeMap
+    )
     {
         var groups = new List<(string, int)>();
         var lastCol = Math.Max(sheet.LastColumnUsed()?.ColumnNumber() ?? 68, 3);
@@ -146,7 +171,8 @@ public static class ItisExcelParser
         IXLWorksheet sheet,
         Dictionary<(int Row, int Col), (int Row, int Col)> mergeMap,
         int row,
-        int col)
+        int col
+    )
     {
         var origin = mergeMap.GetValueOrDefault((row, col), (row, col));
         return ReadCell(sheet.Cell(origin.Item1, origin.Item2));
@@ -172,7 +198,13 @@ public static class ItisExcelParser
         return string.IsNullOrWhiteSpace(rich) ? "" : rich.Trim();
     }
 
-    private sealed record OnlineLink(string Subject, string Teacher, string Groups, string MeetingUrl, string LmsUrl);
+    private sealed record OnlineLink(
+        string Subject,
+        string Teacher,
+        string Groups,
+        string MeetingUrl,
+        string LmsUrl
+    );
 
     private static List<OnlineLink> ReadLinks(IXLWorksheet sheet)
     {
@@ -213,9 +245,11 @@ public static class ItisExcelParser
             }
 
             var score = SubjectScore(lesson.Subject, link.Subject);
-            if (!string.IsNullOrWhiteSpace(link.Teacher) &&
-                !string.IsNullOrWhiteSpace(lesson.Teacher) &&
-                NormalizeKey(link.Teacher) == NormalizeKey(lesson.Teacher))
+            if (
+                !string.IsNullOrWhiteSpace(link.Teacher)
+                && !string.IsNullOrWhiteSpace(lesson.Teacher)
+                && NormalizeKey(link.Teacher) == NormalizeKey(lesson.Teacher)
+            )
             {
                 score += 3;
             }
@@ -246,9 +280,16 @@ public static class ItisExcelParser
     private static bool GroupMatches(string field, string group)
     {
         var target = NormalizeGroup(group);
-        foreach (var rawPart in field.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        foreach (
+            var rawPart in field.Split(
+                ',',
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+            )
+        )
         {
-            var part = Regex.Replace(rawPart, @"курс(ы)? по выбору", "", RegexOptions.IgnoreCase).Trim();
+            var part = Regex
+                .Replace(rawPart, @"курс(ы)? по выбору", "", RegexOptions.IgnoreCase)
+                .Trim();
             if (string.IsNullOrWhiteSpace(part))
             {
                 continue;
@@ -271,17 +312,25 @@ public static class ItisExcelParser
                 continue;
             }
 
-            if (!int.TryParse(range.Groups[2].Value, out var from) ||
-                !int.TryParse(range.Groups[4].Value, out var to))
+            if (
+                !int.TryParse(range.Groups[2].Value, out var from)
+                || !int.TryParse(range.Groups[4].Value, out var to)
+            )
             {
                 continue;
             }
 
             var numberMatch = Regex.Match(target, @"(\d+)$");
-            if (numberMatch.Success &&
-                int.TryParse(numberMatch.Value, out var number) &&
-                number >= from && number <= to &&
-                target.StartsWith(NormalizeGroup(prefix + "-"), StringComparison.OrdinalIgnoreCase))
+            if (
+                numberMatch.Success
+                && int.TryParse(numberMatch.Value, out var number)
+                && number >= from
+                && number <= to
+                && target.StartsWith(
+                    NormalizeGroup(prefix + "-"),
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 return true;
             }
@@ -312,7 +361,9 @@ public static class ItisExcelParser
         var left = a.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var right = b.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var overlap = left.Intersect(right).Count(t => t.Length > 3);
-        return overlap >= 2 ? 3 : overlap == 1 ? 2 : 0;
+        return overlap >= 2 ? 3
+            : overlap == 1 ? 2
+            : 0;
     }
 
     private static string NormalizeGroup(string value)

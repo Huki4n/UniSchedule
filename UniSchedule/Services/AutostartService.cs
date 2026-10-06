@@ -9,8 +9,9 @@ public static class AutostartService
 
     public static void Apply(bool enabled)
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey, true)
-                        ?? Registry.CurrentUser.CreateSubKey(RunKey);
+        using var key =
+            Registry.CurrentUser.OpenSubKey(RunKey, true)
+            ?? Registry.CurrentUser.CreateSubKey(RunKey);
         if (key is null)
         {
             return;

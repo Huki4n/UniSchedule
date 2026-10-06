@@ -1,4 +1,3 @@
-using System.Windows;
 using Drawing = System.Drawing;
 using Forms = System.Windows.Forms;
 
@@ -18,8 +17,8 @@ public sealed class TrayService : IDisposable
         _icon = new Forms.NotifyIcon
         {
             Icon = _ownedIcon,
-            Text = "Расписание",
-            Visible = true
+            Text = "UniSchedule",
+            Visible = true,
         };
 
         var menu = new Forms.ContextMenuStrip();

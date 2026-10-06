@@ -1,5 +1,3 @@
-using Microsoft.Data.Sqlite;
-
 namespace UniSchedule.Data;
 
 public sealed partial class AppDatabase
@@ -8,8 +6,7 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             SELECT 1 FROM NotificationLog
             WHERE LessonId=$id AND FireDate=$date AND OffsetMinutes=$off
             """;
@@ -23,8 +20,7 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             INSERT OR IGNORE INTO NotificationLog (LessonId, FireDate, OffsetMinutes)
             VALUES ($id, $date, $off)
             """;
@@ -38,8 +34,7 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             SELECT 1 FROM HomeworkNotificationLog
             WHERE HomeworkId=$id AND FireDate=$date AND OffsetMinutes=$off
             """;
@@ -53,8 +48,7 @@ public sealed partial class AppDatabase
     {
         using var db = Open();
         using var cmd = db.CreateCommand();
-        cmd.CommandText =
-            """
+        cmd.CommandText = """
             INSERT OR IGNORE INTO HomeworkNotificationLog (HomeworkId, FireDate, OffsetMinutes)
             VALUES ($id, $date, $off)
             """;

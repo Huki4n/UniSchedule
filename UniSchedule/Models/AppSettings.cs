@@ -17,7 +17,7 @@ public sealed class AppSettings
         HomeworkPresetThreeDays,
         HomeworkPresetDay,
         HomeworkPresetTwelveHours,
-        HomeworkPresetFourHours
+        HomeworkPresetFourHours,
     ];
     public static readonly DateTime DefaultSemesterStart = new(2026, 9, 1);
 
@@ -60,7 +60,12 @@ public sealed class AppSettings
         }
 
         var values = new List<int>();
-        foreach (var part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        foreach (
+            var part in text.Split(
+                ',',
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+            )
+        )
         {
             if (int.TryParse(part, out var minutes))
             {
@@ -89,7 +94,12 @@ public sealed class AppSettings
         }
 
         var values = new List<int>();
-        foreach (var part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        foreach (
+            var part in text.Split(
+                ',',
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+            )
+        )
         {
             if (part.Equals("месяц", StringComparison.OrdinalIgnoreCase))
             {
@@ -105,29 +115,34 @@ public sealed class AppSettings
     }
 
     public static string FormatHomeworkReminderList(IEnumerable<int>? minutes) =>
-        string.Join(",", NormalizeHomeworkReminders(minutes).Select(value =>
-            value == HomeworkMonthOffset ? "месяц" : value.ToString()));
+        string.Join(
+            ",",
+            NormalizeHomeworkReminders(minutes)
+                .Select(value => value == HomeworkMonthOffset ? "месяц" : value.ToString())
+        );
 
-    public static string HomeworkReminderSpan(int minutes) => minutes switch
-    {
-        HomeworkMonthOffset => "месяц",
-        HomeworkPresetWeek => "7 дней",
-        HomeworkPresetFiveDays => "5 дней",
-        HomeworkPresetThreeDays => "3 дня",
-        HomeworkPresetDay => "1 день",
-        HomeworkPresetTwelveHours => "12 часов",
-        HomeworkPresetFourHours => "4 часа",
-        _ => $"{minutes} мин."
-    };
+    public static string HomeworkReminderSpan(int minutes) =>
+        minutes switch
+        {
+            HomeworkMonthOffset => "месяц",
+            HomeworkPresetWeek => "7 дней",
+            HomeworkPresetFiveDays => "5 дней",
+            HomeworkPresetThreeDays => "3 дня",
+            HomeworkPresetDay => "1 день",
+            HomeworkPresetTwelveHours => "12 часов",
+            HomeworkPresetFourHours => "4 часа",
+            _ => $"{minutes} мин.",
+        };
 
-    public AppSettings Clone() => new()
-    {
-        SelectedGroup = SelectedGroup,
-        SemesterStart = SemesterStart,
-        ReminderMinutes = ReminderMinutes.ToArray(),
-        HomeworkReminderMinutes = HomeworkReminderMinutes.ToArray(),
-        NotificationsEnabled = NotificationsEnabled,
-        Autostart = Autostart,
-        MinimizeToTray = MinimizeToTray
-    };
+    public AppSettings Clone() =>
+        new()
+        {
+            SelectedGroup = SelectedGroup,
+            SemesterStart = SemesterStart,
+            ReminderMinutes = ReminderMinutes.ToArray(),
+            HomeworkReminderMinutes = HomeworkReminderMinutes.ToArray(),
+            NotificationsEnabled = NotificationsEnabled,
+            Autostart = Autostart,
+            MinimizeToTray = MinimizeToTray,
+        };
 }

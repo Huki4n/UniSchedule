@@ -29,7 +29,12 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
 
     public event EventHandler<long>? CommentRemoved;
 
-    public HomeworkEditWindow(Homework homework, bool isNew, IReadOnlyList<Lesson> lessons, IReadOnlyList<HomeworkComment>? comments = null)
+    public HomeworkEditWindow(
+        Homework homework,
+        bool isNew,
+        IReadOnlyList<Lesson> lessons,
+        IReadOnlyList<HomeworkComment>? comments = null
+    )
     {
         InitializeComponent();
         _homework = homework;
@@ -45,11 +50,13 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
                 selected = index;
             }
 
-            LessonBox.Items.Add(new ComboBoxItem
-            {
-                Content = HomeworkForm.SubjectTitle(group[0].Subject),
-                Tag = group
-            });
+            LessonBox.Items.Add(
+                new ComboBoxItem
+                {
+                    Content = HomeworkForm.SubjectTitle(group[0].Subject),
+                    Tag = group,
+                }
+            );
             index++;
         }
 
@@ -60,7 +67,8 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
 
         TitleBox.Text = homework.Title;
         DescriptionBox.Text = homework.Description;
-        DeadlineBox.SelectedDate = homework.Deadline == default ? DateTime.Today : homework.Deadline.Date;
+        DeadlineBox.SelectedDate =
+            homework.Deadline == default ? DateTime.Today : homework.Deadline.Date;
         DoneBox.IsChecked = homework.IsDone;
         UrlBox.Text = homework.Url;
         ExtraUrlBox.Text = homework.ExtraUrl;
@@ -69,7 +77,15 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
 
     public Homework Result => _homework;
 
-    private void LessonBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => FillSlots();
+    public void ApplyDone(bool done)
+    {
+        _homework.IsDone = done;
+        DoneBox.IsChecked = done;
+        _baseline = _baseline with { IsDone = done };
+    }
+
+    private void LessonBox_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        FillSlots();
 
     private void FillSlots()
     {
@@ -88,11 +104,9 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
                 selected = i;
             }
 
-            SlotBox.Items.Add(new ComboBoxItem
-            {
-                Content = HomeworkForm.SlotLabel(slots[i]),
-                Tag = slots[i].Id
-            });
+            SlotBox.Items.Add(
+                new ComboBoxItem { Content = HomeworkForm.SlotLabel(slots[i]), Tag = slots[i].Id }
+            );
         }
 
         if (SlotBox.Items.Count > 0)
@@ -104,9 +118,20 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         long? lessonId = SlotBox.SelectedItem is ComboBoxItem { Tag: long id } ? id : null;
-        if (!HomeworkForm.TryValidate(lessonId, TitleBox.Text, DeadlineBox.SelectedDate, out var error))
+        if (
+            !HomeworkForm.TryValidate(
+                lessonId,
+                TitleBox.Text,
+                DeadlineBox.SelectedDate,
+                out var error
+            )
+        )
         {
-            AppDialog.Info(Window.GetWindow(this), "Нельзя сохранить", error ?? HomeworkForm.TitleError);
+            AppDialog.Info(
+                Window.GetWindow(this),
+                "Нельзя сохранить",
+                error ?? HomeworkForm.TitleError
+            );
             return;
         }
 
@@ -137,7 +162,9 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
     private void OpenSchedule_Click(object sender, RoutedEventArgs e)
     {
         ScheduleDate = DeadlineBox.SelectedDate?.Date ?? _homework.Deadline.Date;
-        ScheduleLessonId = SlotBox.SelectedItem is ComboBoxItem { Tag: long id } ? id : _homework.LessonId;
+        ScheduleLessonId = SlotBox.SelectedItem is ComboBoxItem { Tag: long id }
+            ? id
+            : _homework.LessonId;
         OpenSchedule = true;
         Finish(accepted: false);
     }
@@ -153,7 +180,9 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
 
     private HomeworkForm.Fields ReadFields(bool commentsChanged)
     {
-        var lessonId = SlotBox.SelectedItem is ComboBoxItem { Tag: long id } ? id : _homework.LessonId;
+        var lessonId = SlotBox.SelectedItem is ComboBoxItem { Tag: long id }
+            ? id
+            : _homework.LessonId;
         return new HomeworkForm.Fields(
             lessonId,
             TitleBox.Text,
@@ -163,7 +192,8 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
             UrlBox.Text,
             ExtraUrlBox.Text,
             CommentBox.Text,
-            commentsChanged);
+            commentsChanged
+        );
     }
 
     public void SetComments(IReadOnlyList<HomeworkComment> comments)
@@ -172,8 +202,10 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
         var saved = _homework.Id > 0;
         CommentLocked.Visibility = saved ? Visibility.Collapsed : Visibility.Visible;
         CommentComposer.Visibility = saved ? Visibility.Visible : Visibility.Collapsed;
-        var muted = (System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("AppMuted");
-        var text = (System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("AppText");
+        var muted = (System.Windows.Media.Brush)
+            System.Windows.Application.Current.FindResource("AppMuted");
+        var text = (System.Windows.Media.Brush)
+            System.Windows.Application.Current.FindResource("AppText");
         foreach (var comment in comments)
         {
             var row = new DockPanel { Margin = new Thickness(0, 0, 0, 14) };
@@ -186,12 +218,12 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
                 Background = System.Windows.Media.Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Foreground = muted,
-                VerticalAlignment = VerticalAlignment.Top
+                VerticalAlignment = VerticalAlignment.Top,
             };
             var confirm = new StackPanel
             {
                 Orientation = System.Windows.Controls.Orientation.Horizontal,
-                Visibility = Visibility.Collapsed
+                Visibility = Visibility.Collapsed,
             };
             var cancel = new System.Windows.Controls.Button
             {
@@ -199,7 +231,7 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
                 Height = 36,
                 MinWidth = 88,
                 Padding = new Thickness(12, 0, 12, 0),
-                Margin = new Thickness(0, 0, 8, 0)
+                Margin = new Thickness(0, 0, 8, 0),
             };
             var erase = new System.Windows.Controls.Button
             {
@@ -207,7 +239,7 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
                 Height = 36,
                 MinWidth = 96,
                 Padding = new Thickness(12, 0, 12, 0),
-                Tag = comment.Id
+                Tag = comment.Id,
             };
             cancel.Click += (_, _) => HideDeleteConfirm(remove, confirm);
             erase.Click += RemoveComment_Click;
@@ -220,20 +252,24 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
             DockPanel.SetDock(actions, Dock.Right);
             row.Children.Add(actions);
             var lines = new StackPanel();
-            lines.Children.Add(new TextBlock
-            {
-                Text = CommentWhen(comment.CreatedAt),
-                Foreground = muted,
-                FontSize = 13
-            });
-            lines.Children.Add(new TextBlock
-            {
-                Text = comment.Body,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = text,
-                FontSize = 15,
-                Margin = new Thickness(0, 2, 8, 0)
-            });
+            lines.Children.Add(
+                new TextBlock
+                {
+                    Text = CommentWhen(comment.CreatedAt),
+                    Foreground = muted,
+                    FontSize = 13,
+                }
+            );
+            lines.Children.Add(
+                new TextBlock
+                {
+                    Text = comment.Body,
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = text,
+                    FontSize = 15,
+                    Margin = new Thickness(0, 2, 8, 0),
+                }
+            );
             row.Children.Add(lines);
             CommentList.Children.Add(row);
         }
@@ -243,10 +279,15 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
     {
         foreach (DockPanel row in CommentList.Children)
         {
-            if (row.Children[0] is Grid actions && actions.Children[1] is StackPanel other && other != confirm)
+            if (
+                row.Children[0] is Grid actions
+                && actions.Children[1] is StackPanel other
+                && other != confirm
+            )
             {
                 other.Visibility = Visibility.Collapsed;
-                ((System.Windows.Controls.Button)actions.Children[0]).Visibility = Visibility.Visible;
+                ((System.Windows.Controls.Button)actions.Children[0]).Visibility =
+                    Visibility.Visible;
             }
         }
 
@@ -273,7 +314,10 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
             return "Вчера " + clock;
         }
 
-        return created.ToString("dd.MM.yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        return created.ToString(
+            "dd.MM.yyyy HH:mm",
+            System.Globalization.CultureInfo.InvariantCulture
+        );
     }
 
     private void CommentBox_GotFocus(object sender, RoutedEventArgs e) => ExpandComment();
@@ -282,14 +326,17 @@ public partial class HomeworkEditWindow : System.Windows.Controls.UserControl
     {
         Dispatcher.BeginInvoke(() =>
         {
-            if (!CommentComposer.IsKeyboardFocusWithin && string.IsNullOrWhiteSpace(CommentBox.Text))
+            if (
+                !CommentComposer.IsKeyboardFocusWithin && string.IsNullOrWhiteSpace(CommentBox.Text)
+            )
             {
                 CollapseComment();
             }
         });
     }
 
-    private void CommentBox_TextChanged(object sender, TextChangedEventArgs e) => UpdateCommentPlaceholder();
+    private void CommentBox_TextChanged(object sender, TextChangedEventArgs e) =>
+        UpdateCommentPlaceholder();
 
     private void CollapseComment_Click(object sender, RoutedEventArgs e)
     {

@@ -13,7 +13,8 @@ public class LessonTextParserTests
             DayOfWeek.Monday,
             new TimeSpan(8, 30, 0),
             new TimeSpan(10, 0, 0),
-            "11-321");
+            "11-321"
+        );
 
         Assert.Equal("Базы данных", lesson.Subject);
         Assert.Equal("Иванов И.И.", lesson.Teacher);
@@ -32,7 +33,8 @@ public class LessonTextParserTests
             DayOfWeek.Tuesday,
             new TimeSpan(10, 10, 0),
             new TimeSpan(11, 40, 0),
-            "11-321");
+            "11-321"
+        );
 
         Assert.Equal(WeekParity.Odd, lesson.Parity);
         Assert.Equal(LessonCodes.Practice, lesson.LessonType);
@@ -51,7 +53,8 @@ public class LessonTextParserTests
             DayOfWeek.Monday,
             new TimeSpan(8, 30, 0),
             new TimeSpan(10, 0, 0),
-            "11-321");
+            "11-321"
+        );
 
         Assert.Equal(type, lesson.LessonType);
         Assert.Equal(subject, lesson.Subject);
@@ -65,11 +68,50 @@ public class LessonTextParserTests
             DayOfWeek.Wednesday,
             new TimeSpan(8, 30, 0),
             new TimeSpan(10, 0, 0),
-            "11-321");
+            "11-321"
+        );
 
         Assert.Equal(2, lessons.Count);
-        Assert.Contains(lessons, lesson => lesson.Subject.Contains("Предмет один", StringComparison.Ordinal));
-        Assert.Contains(lessons, lesson => lesson.Subject.Contains("Предмет два", StringComparison.Ordinal));
+        Assert.Contains(
+            lessons,
+            lesson => lesson.Subject.Contains("Предмет один", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            lessons,
+            lesson => lesson.Subject.Contains("Предмет два", StringComparison.Ordinal)
+        );
+        Assert.Equal(lessons[0].ElectiveKey, lessons[1].ElectiveKey);
+        Assert.False(string.IsNullOrWhiteSpace(lessons[0].ElectiveKey));
+    }
+
+    [Fact]
+    public void ParseAll_SplitsDisciplineChoice_WithWebinarNote()
+    {
+        var lessons = LessonTextParser.ParseAll(
+            """
+            Дисциплина по выбору:
+             Кроссплатформенная разработка
+            Евстратова Д.Д.,
+            (вебинары)
+            Основы Linux
+            Резников Я.Я. (вебинары)
+            """,
+            DayOfWeek.Tuesday,
+            new TimeSpan(12, 0, 0),
+            new TimeSpan(13, 30, 0),
+            "11-321"
+        );
+
+        Assert.Equal(
+            ["Кроссплатформенная разработка", "Основы Linux"],
+            lessons.Select(lesson => lesson.Subject).ToArray()
+        );
+        Assert.Equal(
+            ["Евстратова Д.Д.", "Резников Я.Я."],
+            lessons.Select(lesson => lesson.Teacher).ToArray()
+        );
+        Assert.All(lessons, lesson => Assert.Equal("вебинары", lesson.Notes));
+        Assert.Equal("11-321|2|12:00", lessons[0].ElectiveKey);
     }
 
     [Theory]

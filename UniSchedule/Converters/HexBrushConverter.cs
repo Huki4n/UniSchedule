@@ -12,6 +12,10 @@ public sealed class HexBrushConverter : IValueConverter
         return (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
     }
 
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
+    public object ConvertBack(
+        object? value,
+        Type targetType,
+        object? parameter,
+        CultureInfo culture
+    ) => throw new NotSupportedException();
 }

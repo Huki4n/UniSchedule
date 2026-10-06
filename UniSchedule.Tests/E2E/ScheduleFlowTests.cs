@@ -25,8 +25,12 @@ public sealed class ScheduleFlowTests
 
             session.Press("Settings");
             session.WaitFor("SettingsWindow");
+            session.Press("OpenNotifications");
+            session.WaitFor("NotificationSettingsWindow");
             session.Press("ReminderRemove");
             session.Press("ReminderRemove");
+            session.Press("SaveNotifications");
+            session.WaitGone("NotificationSettingsWindow");
             session.Uncheck("MinimizeToTray");
             session.Press("SaveSettings");
             session.WaitGone("SettingsWindow");
@@ -39,7 +43,11 @@ public sealed class ScheduleFlowTests
             session.WaitFor("LessonEditor");
             session.Press("SaveLesson");
             session.WaitFor("AppDialog");
-            Assert.Contains("Нельзя сохранить", session.Text("DialogTitle"), StringComparison.Ordinal);
+            Assert.Contains(
+                "Нельзя сохранить",
+                session.Text("DialogTitle"),
+                StringComparison.Ordinal
+            );
             session.Press("DialogOk");
             session.WaitGone("AppDialog");
             session.Press("CancelLesson");
@@ -98,13 +106,12 @@ public sealed class ScheduleFlowTests
             Assert.Equal("Базы данных 2", ReadLessons(databasePath).Single().Subject);
             Assert.Equal("Сети", ReadLessons(databasePath, "11-408").Single().Subject);
 
-            var start = new ProcessStartInfo(AppHarness.ExePath())
-            {
-                UseShellExecute = false
-            };
+            var start = new ProcessStartInfo(AppHarness.ExePath()) { UseShellExecute = false };
             start.ArgumentList.Add("--data");
             start.ArgumentList.Add(databasePath);
-            using var second = Process.Start(start) ?? throw new InvalidOperationException("Второй экземпляр не запустился.");
+            using var second =
+                Process.Start(start)
+                ?? throw new InvalidOperationException("Второй экземпляр не запустился.");
             Assert.True(second.WaitForExit(15000));
             Assert.Equal(0, second.ExitCode);
             Assert.Contains("Неделя", session.Text("WeekLabel"), StringComparison.Ordinal);
@@ -140,10 +147,7 @@ public sealed class ScheduleFlowTests
 
     private static Process ProcessStart(string workbookPath, string reportPath, string databasePath)
     {
-        var start = new ProcessStartInfo(AppHarness.ExePath())
-        {
-            UseShellExecute = false
-        };
+        var start = new ProcessStartInfo(AppHarness.ExePath()) { UseShellExecute = false };
         start.ArgumentList.Add("--import");
         start.ArgumentList.Add(workbookPath);
         start.ArgumentList.Add("--out");
@@ -160,7 +164,11 @@ public sealed class ScheduleFlowTests
         if (now.DayOfWeek != DayOfWeek.Sunday && later < new TimeSpan(22, 0, 0))
         {
             var start = new TimeSpan(later.Hours, 0, 0);
-            return ((int)now.DayOfWeek - 1, start.ToString(@"hh\:mm"), start.Add(TimeSpan.FromHours(1)).ToString(@"hh\:mm"));
+            return (
+                (int)now.DayOfWeek - 1,
+                start.ToString(@"hh\:mm"),
+                start.Add(TimeSpan.FromHours(1)).ToString(@"hh\:mm")
+            );
         }
 
         var date = now.Date.AddDays(1);
@@ -202,7 +210,9 @@ public sealed class ScheduleFlowTests
             Thread.Sleep(100);
         }
 
-        throw new TimeoutException($"Текст «{fragment}» не появился в {automationId}. Сейчас: {session.Text(automationId)}");
+        throw new TimeoutException(
+            $"Текст «{fragment}» не появился в {automationId}. Сейчас: {session.Text(automationId)}"
+        );
     }
 
     private static AppSettings Read(string databasePath)
@@ -228,7 +238,9 @@ public sealed class ScheduleFlowTests
         {
             try
             {
-                return new AppDatabase(databasePath).GetLessons(group ?? AppSettings.DefaultGroupCode);
+                return new AppDatabase(databasePath).GetLessons(
+                    group ?? AppSettings.DefaultGroupCode
+                );
             }
             catch (Microsoft.Data.Sqlite.SqliteException) when (DateTime.UtcNow < until)
             {
@@ -239,7 +251,11 @@ public sealed class ScheduleFlowTests
 
     private static string NewDirectory()
     {
-        var path = Path.Combine(Path.GetTempPath(), "unischedule-e2e", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            "unischedule-e2e",
+            Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(path);
         return path;
     }
@@ -251,9 +267,6 @@ public sealed class ScheduleFlowTests
         {
             Directory.Delete(directory, recursive: true);
         }
-        catch (IOException)
-        {
-        }
+        catch (IOException) { }
     }
-
 }

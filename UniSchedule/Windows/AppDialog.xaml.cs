@@ -6,7 +6,7 @@ public enum SavePrompt
 {
     Save,
     Discard,
-    Stay
+    Stay,
 }
 
 public partial class AppDialog : Window
@@ -27,7 +27,12 @@ public partial class AppDialog : Window
         return dialog._prompt;
     }
 
-    public static bool Confirm(Window? owner, string title, string message, string okText = "Удалить")
+    public static bool Confirm(
+        Window? owner,
+        string title,
+        string message,
+        string okText = "Удалить"
+    )
     {
         var dialog = Create(owner, title, message, okText, showCancel: true);
         return dialog.ShowDialog() == true;
@@ -39,7 +44,13 @@ public partial class AppDialog : Window
         dialog.ShowDialog();
     }
 
-    private static AppDialog Create(Window? owner, string title, string message, string okText, bool showCancel)
+    private static AppDialog Create(
+        Window? owner,
+        string title,
+        string message,
+        string okText,
+        bool showCancel
+    )
     {
         var dialog = new AppDialog();
         if (owner is { IsLoaded: true })

@@ -2,7 +2,7 @@
 SHELL := cmd.exe
 .SHELLFLAGS := /C
 
-.PHONY: help build test test-unit test-e2e run build-debug test-debug test-debug-unit test-debug-e2e import data publish installer install uninstall
+.PHONY: help build test test-unit test-e2e run build-debug test-debug test-debug-unit test-debug-e2e format lint hooks import data publish installer install uninstall
 
 TFM := net10.0-windows10.0.17763.0
 EXE := UniSchedule/bin/Release/$(TFM)/UniSchedule.exe
@@ -15,6 +15,9 @@ help:
 	@echo test-e2e         Release tests, category E2E
 	@echo run              Run the Release app
 	@echo build-debug      Debug build
+	@echo format           Format C# with CSharpier
+	@echo lint             Check analyzers, warning and above
+	@echo hooks            Point Git at .githooks
 	@echo test-debug       Debug tests, all categories
 	@echo test-debug-unit  Debug tests without E2E
 	@echo test-debug-e2e   Debug tests, category E2E
@@ -48,6 +51,19 @@ run:
 # Собрать Debug. Используйте, если запущенное приложение держит Release-exe.
 build-debug:
 	dotnet build UniSchedule.slnx -c Debug
+
+# Отформатировать C#. Ширина строки 100, как в .csharpierrc.json.
+format:
+	dotnet tool restore
+	dotnet csharpier format .
+
+# Проверить анализаторы. Неиспользуемые using — предупреждение.
+lint:
+	dotnet format UniSchedule.slnx analyzers --severity warn --verify-no-changes
+
+# Включить хуки .githooks для этого клона.
+hooks:
+	git config core.hooksPath .githooks
 
 # Прогнать тесты Debug, все категории, не перезаписывая занятый Release-exe.
 test-debug:
@@ -83,7 +99,7 @@ publish:
 installer: publish
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-installer.ps1
 
-# Скопировать публикацию в %LocalAppData%\UniSchedule\app и создать ярлык «Расписание».
+# Скопировать публикацию в %LocalAppData%\UniSchedule\app и создать ярлык «UniSchedule».
 install:
 	@if not exist "$(DIST)\UniSchedule.exe" (echo Сначала выполните make publish & exit /b 1)
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1 -Action install -Source "$(abspath $(DIST))"

@@ -2,9 +2,16 @@ using UniSchedule.Models;
 
 namespace UniSchedule.Services;
 
-public readonly record struct DueReminder(Lesson Lesson, int OffsetMinutes);
+public readonly record struct DueReminder(Lesson Lesson, int OffsetMinutes)
+{
+    public IReadOnlyList<int> SupersededOffsets { get; init; } = [];
+}
 
-public readonly record struct DueHomeworkReminder(Homework Homework, int OffsetMinutes, DateTime FireDate);
+public readonly record struct DueHomeworkReminder(
+    Homework Homework,
+    int OffsetMinutes,
+    DateTime FireDate
+);
 
 public static class NotificationPlanner
 {
@@ -14,7 +21,8 @@ public static class NotificationPlanner
         IReadOnlyList<Lesson> lessons,
         AppSettings settings,
         DateTime now,
-        Func<long, DateTime, int, bool> wasSent)
+        Func<long, DateTime, int, bool> wasSent
+    )
     {
         if (!settings.NotificationsEnabled || now.DayOfWeek == DayOfWeek.Sunday)
         {
@@ -24,7 +32,10 @@ public static class NotificationPlanner
         var due = new List<DueReminder>();
         foreach (var lesson in lessons)
         {
-            if (lesson.Id <= 0 || !AcademicCalendar.AppliesOnDate(lesson, now, settings.SemesterStart))
+            if (
+                lesson.Id <= 0
+                || !AcademicCalendar.AppliesOnDate(lesson, now, settings.SemesterStart)
+            )
             {
                 continue;
             }
@@ -35,21 +46,30 @@ public static class NotificationPlanner
                 continue;
             }
 
+            var pending = new List<int>();
             foreach (var offset in settings.ReminderOffsets)
             {
                 var fireAt = start - TimeSpan.FromMinutes(offset);
-                if (now < fireAt || now > fireAt + FireWindow)
+                if (now < fireAt || wasSent(lesson.Id, now.Date, offset))
                 {
                     continue;
                 }
 
-                if (wasSent(lesson.Id, now.Date, offset))
-                {
-                    continue;
-                }
-
-                due.Add(new DueReminder(lesson, offset));
+                pending.Add(offset);
             }
+
+            if (pending.Count == 0)
+            {
+                continue;
+            }
+
+            var show = pending.Min();
+            due.Add(
+                new DueReminder(lesson, show)
+                {
+                    SupersededOffsets = pending.Where(offset => offset != show).ToArray(),
+                }
+            );
         }
 
         return due;
@@ -59,7 +79,8 @@ public static class NotificationPlanner
         IReadOnlyList<Homework> homework,
         AppSettings settings,
         DateTime now,
-        Func<long, DateTime, int, bool> wasSent)
+        Func<long, DateTime, int, bool> wasSent
+    )
     {
         if (!settings.NotificationsEnabled)
         {
@@ -77,10 +98,15 @@ public static class NotificationPlanner
             var dueAt = HomeworkDueAt(item.Deadline);
             foreach (var offset in settings.HomeworkReminderMinutes)
             {
-                var fireAt = offset == AppSettings.HomeworkMonthOffset
-                    ? dueAt.AddMonths(-1)
-                    : dueAt.AddMinutes(-offset);
-                if (now < fireAt || now > fireAt + FireWindow || wasSent(item.Id, fireAt.Date, offset))
+                var fireAt =
+                    offset == AppSettings.HomeworkMonthOffset
+                        ? dueAt.AddMonths(-1)
+                        : dueAt.AddMinutes(-offset);
+                if (
+                    now < fireAt
+                    || now > fireAt + FireWindow
+                    || wasSent(item.Id, fireAt.Date, offset)
+                )
                 {
                     continue;
                 }

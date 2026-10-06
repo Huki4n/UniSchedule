@@ -1,6 +1,5 @@
-﻿using System.IO;
-using System.Threading;
-using System.Windows;
+﻿using System.Windows;
+using Microsoft.Toolkit.Uwp.Notifications;
 using UniSchedule.Data;
 using UniSchedule.Services;
 using UniSchedule.Windows;
@@ -21,6 +20,8 @@ public partial class App : System.Windows.Application
     private NotificationService? _notifications;
     private MainWindow? _main;
     private Thread? _signalThread;
+    private string? _dataPath;
+    private string? _toastArgument;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -45,6 +46,16 @@ public partial class App : System.Windows.Application
 
         base.OnStartup(e);
         var args = ArgsOverride ?? e.Args;
+        var toastArrived = new ManualResetEventSlim(false);
+        ToastNotificationManagerCompat.OnActivated += toastArgs =>
+        {
+            _toastArgument = toastArgs.Argument;
+            toastArrived.Set();
+            if (_ownsMutex)
+            {
+                Dispatcher.BeginInvoke(DeliverToast);
+            }
+        };
         try
         {
             if (TryHeadlessImport(args))
@@ -54,12 +65,27 @@ public partial class App : System.Windows.Application
             }
 
             var dataPath = AppLaunch.ReadDataPath(args);
+            _dataPath = dataPath;
             _mutex = new Mutex(true, AppLaunch.MutexName(dataPath), out var created);
             _ownsMutex = created;
-            _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, AppLaunch.ShowEventName(dataPath));
+            _showEvent = new EventWaitHandle(
+                false,
+                EventResetMode.AutoReset,
+                AppLaunch.ShowEventName(dataPath)
+            );
 
             if (!created)
             {
+                if (ToastNotificationManagerCompat.WasCurrentProcessToastActivated())
+                {
+                    toastArrived.Wait(TimeSpan.FromSeconds(2));
+                }
+
+                if (!string.IsNullOrWhiteSpace(_toastArgument))
+                {
+                    AppLaunch.WriteOpenRequest(dataPath, _toastArgument);
+                }
+
                 _showEvent.Set();
                 Shutdown();
                 return;
@@ -80,6 +106,7 @@ public partial class App : System.Windows.Application
             _main = new MainWindow(db, settings, _notifications, manageAutostart: dataPath is null);
             MainWindow = _main;
             _main.Show();
+            DeliverToast();
 
             _tray = new TrayService();
             _tray.OpenRequested += ShowMain;
@@ -88,7 +115,7 @@ public partial class App : System.Windows.Application
             _signalThread = new Thread(ListenForShow)
             {
                 IsBackground = true,
-                Name = "UniSchedule.ShowListener"
+                Name = "UniSchedule.ShowListener",
             };
             _signalThread.Start();
         }
@@ -106,7 +133,8 @@ public partial class App : System.Windows.Application
         {
             File.WriteAllText(
                 Path.Combine(Path.GetTempPath(), "unischedule-crash.txt"),
-                ex.ToString());
+                ex.ToString()
+            );
         }
         catch
         {
@@ -134,9 +162,11 @@ public partial class App : System.Windows.Application
             }
         }
 
-        AppDialog.Info(owner ?? (MainWindow is { IsLoaded: true } ? MainWindow : null),
+        AppDialog.Info(
+            owner ?? (MainWindow is { IsLoaded: true } ? MainWindow : null),
             "Уведомление не показано",
-            exception.Message);
+            exception.Message
+        );
     }
 
     private void ShowMain()
@@ -157,6 +187,24 @@ public partial class App : System.Windows.Application
         }
 
         _main.Activate();
+        var request = AppLaunch.TakeOpenRequest(_dataPath);
+        if (!string.IsNullOrWhiteSpace(request))
+        {
+            _main.OpenFromToast(request);
+        }
+    }
+
+    private void DeliverToast()
+    {
+        if (_main is null || string.IsNullOrWhiteSpace(_toastArgument))
+        {
+            return;
+        }
+
+        var argument = _toastArgument;
+        _toastArgument = null;
+        ShowMain();
+        _main.OpenFromToast(argument);
     }
 
     private void ExitApp()
@@ -182,7 +230,10 @@ public partial class App : System.Windows.Application
 
     private static bool TryHeadlessImport(string[] args)
     {
-        var index = Array.FindIndex(args, a => string.Equals(a, "--import", StringComparison.OrdinalIgnoreCase));
+        var index = Array.FindIndex(
+            args,
+            a => string.Equals(a, "--import", StringComparison.OrdinalIgnoreCase)
+        );
         if (index < 0 || index + 1 >= args.Length)
         {
             return false;
@@ -190,7 +241,10 @@ public partial class App : System.Windows.Application
 
         var path = args[index + 1];
         var report = Path.Combine(Path.GetTempPath(), "unischedule-import.txt");
-        var outIndex = Array.FindIndex(args, a => string.Equals(a, "--out", StringComparison.OrdinalIgnoreCase));
+        var outIndex = Array.FindIndex(
+            args,
+            a => string.Equals(a, "--out", StringComparison.OrdinalIgnoreCase)
+        );
         if (outIndex >= 0 && outIndex + 1 < args.Length)
         {
             report = args[outIndex + 1];
@@ -201,13 +255,15 @@ public partial class App : System.Windows.Application
             var result = ItisExcelParser.Parse(path);
             var dataPath = AppLaunch.ReadDataPath(args);
             var db = dataPath is null ? new AppDatabase() : new AppDatabase(dataPath);
-            var count = db.ReplaceImported(result.Lessons);
+            var count = db.ReplaceImported(result.Lessons, result.Groups);
             var settings = db.GetSettings();
             db.SaveSettings(settings);
-            File.WriteAllText(report,
-                $"OK groups={result.Groups.Count} lessons={count} links={result.LinkMatches}{Environment.NewLine}" +
-                $"group={settings.SelectedGroup}{Environment.NewLine}" +
-                string.Join(Environment.NewLine, result.Groups));
+            File.WriteAllText(
+                report,
+                $"OK groups={result.Groups.Count} lessons={count} links={result.LinkMatches}{Environment.NewLine}"
+                    + $"group={settings.SelectedGroup}{Environment.NewLine}"
+                    + string.Join(Environment.NewLine, result.Groups)
+            );
         }
         catch (Exception ex)
         {

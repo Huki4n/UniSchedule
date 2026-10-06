@@ -1,6 +1,6 @@
 ﻿; Per-user setup. The database stays in %LocalAppData%\UniSchedule and is not installed here.
 
-#define MyAppName "Расписание"
+#define MyAppName "UniSchedule"
 #define MyAppVersion "1.0.0"
 #define MyAppExe "UniSchedule.exe"
 #define MyAppPublisher "UniSchedule"
@@ -34,6 +34,9 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Files]
 Source: "..\dist\UniSchedule\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
+
+[InstallDelete]
+Type: files; Name: "{autoprograms}\Расписание.lnk"
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"

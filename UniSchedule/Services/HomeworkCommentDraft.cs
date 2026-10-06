@@ -13,13 +13,15 @@ public sealed class HomeworkCommentDraft
     {
         foreach (var comment in existing)
         {
-            _visible.Add(new HomeworkComment
-            {
-                Id = comment.Id,
-                HomeworkId = comment.HomeworkId,
-                Body = comment.Body,
-                CreatedAt = comment.CreatedAt
-            });
+            _visible.Add(
+                new HomeworkComment
+                {
+                    Id = comment.Id,
+                    HomeworkId = comment.HomeworkId,
+                    Body = comment.Body,
+                    CreatedAt = comment.CreatedAt,
+                }
+            );
         }
     }
 
@@ -43,7 +45,7 @@ public sealed class HomeworkCommentDraft
         {
             Id = _nextTempId--,
             Body = body,
-            CreatedAt = createdAt
+            CreatedAt = createdAt,
         };
         _added.Add(comment);
         _visible.Add(comment);

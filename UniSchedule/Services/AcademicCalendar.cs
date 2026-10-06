@@ -30,7 +30,7 @@ public static class AcademicCalendar
         {
             WeekParity.Odd => week % 2 == 1,
             WeekParity.Even => week % 2 == 0,
-            _ => true
+            _ => true,
         };
     }
 
@@ -46,8 +46,7 @@ public static class AcademicCalendar
     public static string ColumnTitle(DateTime date) =>
         $"{DayName(date.DayOfWeek)}, {date.Day} {MonthShort(date.Month)}";
 
-    public static string MonthTitle(DateTime date) =>
-        $"{MonthName(date.Month)} {date.Year}";
+    public static string MonthTitle(DateTime date) => $"{MonthName(date.Month)} {date.Year}";
 
     public static string WeekLabel(DateTime date, DateTime semesterStart)
     {
@@ -56,74 +55,80 @@ public static class AcademicCalendar
         return $"Неделя {week} · {parity}";
     }
 
-    public static string DayName(DayOfWeek day) => day switch
-    {
-        DayOfWeek.Monday => "Понедельник",
-        DayOfWeek.Tuesday => "Вторник",
-        DayOfWeek.Wednesday => "Среда",
-        DayOfWeek.Thursday => "Четверг",
-        DayOfWeek.Friday => "Пятница",
-        DayOfWeek.Saturday => "Суббота",
-        _ => "Воскресенье"
-    };
+    public static string DayName(DayOfWeek day) =>
+        day switch
+        {
+            DayOfWeek.Monday => "Понедельник",
+            DayOfWeek.Tuesday => "Вторник",
+            DayOfWeek.Wednesday => "Среда",
+            DayOfWeek.Thursday => "Четверг",
+            DayOfWeek.Friday => "Пятница",
+            DayOfWeek.Saturday => "Суббота",
+            _ => "Воскресенье",
+        };
 
-    public static string DayShort(DayOfWeek day) => day switch
-    {
-        DayOfWeek.Monday => "Пн",
-        DayOfWeek.Tuesday => "Вт",
-        DayOfWeek.Wednesday => "Ср",
-        DayOfWeek.Thursday => "Чт",
-        DayOfWeek.Friday => "Пт",
-        DayOfWeek.Saturday => "Сб",
-        _ => "Вс"
-    };
+    public static string DayShort(DayOfWeek day) =>
+        day switch
+        {
+            DayOfWeek.Monday => "Пн",
+            DayOfWeek.Tuesday => "Вт",
+            DayOfWeek.Wednesday => "Ср",
+            DayOfWeek.Thursday => "Чт",
+            DayOfWeek.Friday => "Пт",
+            DayOfWeek.Saturday => "Сб",
+            _ => "Вс",
+        };
 
-    public static string TypeLabel(string type) => type switch
-    {
-        LessonCodes.Lecture => "Лекция",
-        LessonCodes.Practice => "Практика",
-        LessonCodes.Lab => "Лабораторная",
-        LessonCodes.Credit => "Зачет",
-        LessonCodes.Exam => "Экзамен",
-        _ => ""
-    };
+    public static string TypeLabel(string type) =>
+        type switch
+        {
+            LessonCodes.Lecture => "Лекция",
+            LessonCodes.Practice => "Практика",
+            LessonCodes.Lab => "Лабораторная",
+            LessonCodes.Credit => "Зачет",
+            LessonCodes.Exam => "Экзамен",
+            _ => "",
+        };
 
-    public static string ParityLabel(WeekParity parity) => parity switch
-    {
-        WeekParity.Odd => "нечётная",
-        WeekParity.Even => "чётная",
-        _ => "все недели"
-    };
+    public static string ParityLabel(WeekParity parity) =>
+        parity switch
+        {
+            WeekParity.Odd => "нечётная",
+            WeekParity.Even => "чётная",
+            _ => "все недели",
+        };
 
-    private static string MonthShort(int month) => month switch
-    {
-        1 => "янв.",
-        2 => "февр.",
-        3 => "мар.",
-        4 => "апр.",
-        5 => "мая",
-        6 => "июн.",
-        7 => "июл.",
-        8 => "авг.",
-        9 => "сент.",
-        10 => "окт.",
-        11 => "нояб.",
-        _ => "дек."
-    };
+    private static string MonthShort(int month) =>
+        month switch
+        {
+            1 => "янв.",
+            2 => "февр.",
+            3 => "мар.",
+            4 => "апр.",
+            5 => "мая",
+            6 => "июн.",
+            7 => "июл.",
+            8 => "авг.",
+            9 => "сент.",
+            10 => "окт.",
+            11 => "нояб.",
+            _ => "дек.",
+        };
 
-    private static string MonthName(int month) => month switch
-    {
-        1 => "Январь",
-        2 => "Февраль",
-        3 => "Март",
-        4 => "Апрель",
-        5 => "Май",
-        6 => "Июнь",
-        7 => "Июль",
-        8 => "Август",
-        9 => "Сентябрь",
-        10 => "Октябрь",
-        11 => "Ноябрь",
-        _ => "Декабрь"
-    };
+    private static string MonthName(int month) =>
+        month switch
+        {
+            1 => "Январь",
+            2 => "Февраль",
+            3 => "Март",
+            4 => "Апрель",
+            5 => "Май",
+            6 => "Июнь",
+            7 => "Июль",
+            8 => "Август",
+            9 => "Сентябрь",
+            10 => "Октябрь",
+            11 => "Ноябрь",
+            _ => "Декабрь",
+        };
 }
