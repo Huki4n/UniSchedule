@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -214,9 +215,10 @@ public partial class MainWindow
 
     private bool IsInsideEditor(DependencyObject source)
     {
+        var popupContent = EditorPopupContent();
         for (DependencyObject? node = source; node is not null; node = ParentOf(node))
         {
-            if (node == EditorPanel)
+            if (node == EditorPanel || popupContent.Contains(node))
             {
                 return true;
             }
@@ -225,10 +227,41 @@ public partial class MainWindow
         return false;
     }
 
-    private static DependencyObject? ParentOf(DependencyObject node) =>
-        node is Visual or System.Windows.Media.Media3D.Visual3D
-            ? VisualTreeHelper.GetParent(node)
-            : LogicalTreeHelper.GetParent(node);
+    private HashSet<DependencyObject> EditorPopupContent()
+    {
+        var content = new HashSet<DependencyObject>();
+        AddPopupContent(EditorPanel, content);
+        return content;
+    }
+
+    private static void AddPopupContent(DependencyObject node, HashSet<DependencyObject> content)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(node);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(node, i);
+            if (child is Popup { Child: { } popupChild })
+            {
+                content.Add(popupChild);
+            }
+
+            AddPopupContent(child, content);
+        }
+    }
+
+    private static DependencyObject? ParentOf(DependencyObject node)
+    {
+        if (node is Visual or System.Windows.Media.Media3D.Visual3D)
+        {
+            var visualParent = VisualTreeHelper.GetParent(node);
+            if (visualParent is not null)
+            {
+                return visualParent;
+            }
+        }
+
+        return LogicalTreeHelper.GetParent(node);
+    }
 
     private void CloseEditor_Click(object sender, RoutedEventArgs e)
     {
